@@ -240,6 +240,49 @@ func cmdDispatch(args []string) int {
 
 	branch := fmt.Sprintf("%s%d-%s", c.Defaults.BranchPrefix, *issueN, slug(issue.Title))
 	studioIssueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", studioOwner, studioRepo, *issueN)
+	implModel := catalog.ResolveModel("implement", labelNames, stripBinding(issue.Body))
+	qcModel := catalog.ResolveModel("qc", labelNames, stripBinding(issue.Body))
+
+	var existingBind *binding.Binding
+	if b, err := binding.Parse(issue.Body); err == nil {
+		existingBind = b
+	}
+	specStatus := ""
+	if existingBind != nil {
+		specStatus = existingBind.SpecStatus
+	}
+
+	fmt.Printf("target: %s (%s)\n", targetURL, name)
+	fmt.Printf("branch: %s\n", branch)
+	fmt.Printf("model implement=%s qc=%s\n", implModel, qcModel)
+
+	needQC := !catalog.SpecAllowsStart(labelNames, specStatus)
+	if needQC {
+		specFrag, cont, code := runIntakeQC(ctx, client, studioOwner, studioRepo, *issueN, issue, targetURL, qcModel, existingBind, *dryRun)
+		if code != 0 {
+			return code
+		}
+		if !cont {
+			return 0
+		}
+		if existingBind == nil {
+			existingBind = &binding.Binding{}
+		}
+		existingBind.SpecStatus = specFrag.SpecStatus
+		existingBind.SpecAgentID = specFrag.SpecAgentID
+		// Refresh issue body after QC upsert for later binding merge.
+		if !*dryRun && client != nil {
+			if refreshed, err := client.GetIssue(ctx, studioOwner, studioRepo, *issueN); err == nil {
+				issue = refreshed
+				if b, err := binding.Parse(issue.Body); err == nil {
+					existingBind = b
+				}
+			}
+		}
+	} else {
+		fmt.Println("intake: skipped (skip-qc / spec-ok / approved)")
+	}
+
 	p := prompt.Implement(prompt.ImplementInput{
 		IssueNumber:    *issueN,
 		Title:          issue.Title,
@@ -249,10 +292,8 @@ func cmdDispatch(args []string) int {
 		StudioIssueURL: studioIssueURL,
 	})
 
-	fmt.Printf("target: %s (%s)\n", targetURL, name)
-	fmt.Printf("branch: %s\n", branch)
 	if *dryRun {
-		fmt.Println("--- prompt ---")
+		fmt.Println("--- implement prompt ---")
 		fmt.Println(p)
 		fmt.Println("dispatch: dry-run ok (no worker)")
 		return 0
@@ -264,6 +305,7 @@ func cmdDispatch(args []string) int {
 	}
 
 	_ = client.AddLabels(ctx, studioOwner, studioRepo, *issueN, []string{"working"})
+	_ = client.RemoveLabel(ctx, studioOwner, studioRepo, *issueN, "needs-spec")
 	w := cursor.Helper{Timeout: 45 * time.Minute}
 	res, err := w.Start(ctx, worker.StartReq{
 		IssueNumber:  *issueN,
@@ -272,7 +314,7 @@ func cmdDispatch(args []string) int {
 		RepoURL:      targetURL,
 		StartingRef:  "main",
 		BranchName:   branch,
-		Model:        envOr("STUDIO_CURSOR_MODEL", "composer-2.5"),
+		Model:        implModel,
 		AutoCreatePR: c.Defaults.DraftPR,
 		Prompt:       p,
 	})
@@ -294,7 +336,17 @@ func cmdDispatch(args []string) int {
 		Branch:    firstNonEmpty(res.Branch, branch),
 		PRURL:     res.PRURL,
 		PRStatus:  "open",
+		Model:     implModel,
 		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+	if existingBind != nil {
+		b.SpecStatus = existingBind.SpecStatus
+		b.SpecAgentID = existingBind.SpecAgentID
+		if b.SpecStatus == "" && catalog.SpecAllowsStart(labelNames, "") {
+			b.SpecStatus = "skipped"
+		}
+	} else if catalog.HasLabel(labelNames, "skip-qc") {
+		b.SpecStatus = "skipped"
 	}
 	if res.PRURL != "" {
 		if n := prNumber(res.PRURL); n != "" {
@@ -313,7 +365,7 @@ func cmdDispatch(args []string) int {
 		return 1
 	}
 
-	comment := fmt.Sprintf("Studio: started agent `%s`", res.AgentID)
+	comment := fmt.Sprintf("Studio: started agent `%s` (model `%s`)", res.AgentID, implModel)
 	if res.PRURL != "" {
 		comment += fmt.Sprintf("\nPR: %s", res.PRURL)
 		_ = client.AddLabels(ctx, studioOwner, studioRepo, *issueN, []string{"pr-open"})

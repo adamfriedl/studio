@@ -5,14 +5,15 @@ body:
   - type: markdown
     attributes:
       value: |
-        Add a label after filing:
+        After filing, add a label:
         - `repo:pad-lab` / `repo:studio` / … from `repos.yaml`
-        - `new:go-service` to create a repo from the Go template
+        - `new:go-service` to create from the Go template
+        Optional: `skip-qc`, `skip-review`, or `model:<cursor-model-id>`
   - type: textarea
     id: summary
     attributes:
       label: What to do
-      description: Small, testable scope. Studio will open a draft PR on the target.
+      description: Small, testable scope. Intake QC runs first unless you add skip-qc.
       placeholder: Fix X so that Y…
     validations:
       required: true
@@ -20,8 +21,16 @@ body:
     id: new_repo_name
     attributes:
       label: New repo name
-      description: Only for `new:` labels. GitHub repo name (e.g. notes-api). Leave blank to slugify the issue title.
+      description: Only for `new:` labels. Leave blank to slugify the title.
       placeholder: notes-api
+    validations:
+      required: false
+  - type: input
+    id: model
+    attributes:
+      label: Cursor model (optional)
+      description: Overrides STUDIO_*_MODEL for this issue (e.g. composer-2.5). Also settable as label model:…
+      placeholder: composer-2.5
     validations:
       required: false
   - type: textarea

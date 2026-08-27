@@ -82,12 +82,12 @@ func truncate(s string, n int) string {
 }
 
 type Issue struct {
-	Number int    `json:"number"`
-	Title  string `json:"title"`
-	Body   string `json:"body"`
-	State  string `json:"state"`
+	Number  int    `json:"number"`
+	Title   string `json:"title"`
+	Body    string `json:"body"`
+	State   string `json:"state"`
 	HTMLURL string `json:"html_url"`
-	Labels []struct {
+	Labels  []struct {
 		Name string `json:"name"`
 	} `json:"labels"`
 }

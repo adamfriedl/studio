@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	repoNameRE      = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
-	issueFormNameRE = regexp.MustCompile(`(?mi)^###\s+New repo name\s*\n+(\S[^\n]*)`)
+	repoNameRE       = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+	issueFormNameRE  = regexp.MustCompile(`(?mi)^###\s+New repo name\s*\n+(\S[^\n]*)`)
+	issueFormModelRE = regexp.MustCompile(`(?mi)^###\s+Cursor model[^\n]*\n+(\S[^\n]*)`)
 )
 
 // HasRepo reports whether name is already in the allowlist.

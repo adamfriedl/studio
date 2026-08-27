@@ -1,41 +1,29 @@
 # Studio handoff — 2026-08-27
 
-Short pickup note. Spec lives in [`PRD.md`](./PRD.md). App ops: [`docs/github-app.md`](./docs/github-app.md).
+Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./docs/github-app.md).
 
 ## Done
 
 | Phase | What |
 | --- | --- |
-| **0** | Go CLI, `repos.yaml`, binding, `doctor`, tests, README |
-| **1** | Cursor helper (`scripts/cursor-helper`), `dispatch`, `dispatch.yml` (label-only `repo:`/`new:`), idempotent if binding has `agent_id`. Live: pad-lab + studio→homelab#8 |
-| **2–3 (MVP)** | `studio watch`, `watch.yml` (15m + `repository_dispatch`), CI log FollowUp, review-comment FollowUp, close-on-merge. Prefer App token; PAT fallback |
-| **App** | `adamfriedl-studio` install **157096911**; **All repositories** (confirmed). Secrets `STUDIO_APP_ID` / `STUDIO_APP_PRIVATE_KEY` (+ still `CURSOR_API_KEY`, `STUDIO_GITHUB_TOKEN`). Workflows mint App token for `owner: adamfriedl` **without** hardcoded repo list. New repos inherit App access; `repos.yaml` is still the dispatch gate. |
-| **4** | `new:` implemented: create from template → ensure `repo:<name>` label → commit allowlist to `repos.yaml` → `Worker.Start`. Template [`adamfriedl/template-go-svc`](https://github.com/adamfriedl/template-go-svc) (`is_template`); catalog key `go-service`; label `new:go-service`. |
-| **Watch harden** | On FollowUp/resume failure (or missing `agent_id`), `run.SendOrReplace` Starts a new agent on the existing branch, upserts `agent_id`, comments worker replaced. Keeps `branch`/`pr_url`. Closed-unmerged PR → `needs-human`, issue stays open. |
+| **0–4** | CLI, dispatch, watch, App, `new:`, watch harden, closed-unmerged → needs-human |
+| **5** | Intake QC on by default; `needs-spec` / `spec-ok` / `skip-qc`; separate `spec_agent_id` |
+| **6** | SHA-gated PR reviewer (COMMENT only, max 2 rounds); then implementer FollowUp on threads |
+| **Models** | `STUDIO_CURSOR_MODEL` / `STUDIO_QC_MODEL` / `STUDIO_REVIEW_MODEL` + per-issue `model:` / label |
 
-**Allowlist today:** `pad-lab`, `studio`, `job-search`, `homelab`, `adamfriedl.github.io`, `intake-desk`. Default model `composer-2.5` via `STUDIO_CURSOR_MODEL`.
-
-**Tokens (not in git):** `~/Documents/tokens/studio.md`, `~/Documents/tokens/studio-github-app.json`.
-
-## Operator TODO (optional)
-
-- Apply [`docs/target-hook.md`](./docs/target-hook.md) on a pilot target (homelab) so watch is event-driven; poll stays backstop.
-
-App **Administration: write** granted (2026-08-27) — App token can `POST …/generate`; PAT fallback remains as safety net only.
+**Allowlist:** pad-lab, studio, job-search, homelab, adamfriedl.github.io, intake-desk.
 
 ## Pick up here
 
-1. **Do not start Phase 5/6** until ~two weeks of real Phase 3 use (PRD §16).
-2. Optional: pilot target-hook (above).
-
-## Live Phase 4 smoke (done 2026-08-27)
-
-- Issue [#2](https://github.com/adamfriedl/studio/issues/2) `new:go-service` → repo created + catalog + PR (repo deleted after smoke).
+1. Live smoke: one intake `needs-work` → edit → `spec-ok`; one full ok→PR; one reviewer `changes-requested` → implementer.
+2. Optional: target-hook on a pilot repo (event-driven watch).
+3. Optional: raise default models in workflows once a stronger cloud id is confirmed.
 
 ## Quick verify
 
 ```bash
 go test ./...
 go run ./cmd/studio doctor --dry-run
-STUDIO_DRY_LABELS=new:go-service STUDIO_DRY_TITLE='hello notes' go run ./cmd/studio dispatch --issue 99 --dry-run
+STUDIO_DRY_LABELS=repo:pad-lab,skip-qc go run ./cmd/studio dispatch --issue 1 --dry-run
+STUDIO_DRY_LABELS=repo:pad-lab go run ./cmd/studio dispatch --issue 1 --dry-run
 ```

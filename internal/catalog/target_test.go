@@ -4,7 +4,7 @@ import "testing"
 
 func TestTargetFromLabels(t *testing.T) {
 	c := &Catalog{
-		Org: "adamfriedl",
+		Org:   "adamfriedl",
 		Repos: []Repo{{Name: "pad-lab"}},
 		Templates: map[string]Template{
 			"go-service": {From: "adamfriedl/template-go-svc"},

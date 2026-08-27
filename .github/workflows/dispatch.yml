@@ -30,7 +30,9 @@ jobs:
       (github.event_name == 'issues' &&
        github.event.issue.state == 'open' &&
        (startsWith(github.event.label.name, 'repo:') ||
-        startsWith(github.event.label.name, 'new:')))
+        startsWith(github.event.label.name, 'new:') ||
+        github.event.label.name == 'spec-ok' ||
+        github.event.label.name == 'skip-qc'))
     steps:
       - uses: actions/checkout@v4
 
@@ -76,4 +78,6 @@ jobs:
           # Classic PAT — used only for new: template generate if the App lacks administration.
           STUDIO_GITHUB_PAT: ${{ secrets.STUDIO_GITHUB_TOKEN }}
           STUDIO_CURSOR_MODEL: composer-2.5
+          STUDIO_QC_MODEL: composer-2.5
+          STUDIO_REVIEW_MODEL: composer-2.5
         run: go run ./cmd/studio dispatch --issue "${{ steps.issue.outputs.n }}"

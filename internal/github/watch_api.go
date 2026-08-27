@@ -10,7 +10,7 @@ import (
 )
 
 type ListedIssue struct {
-	Number  int `json:"number"`
+	Number  int    `json:"number"`
 	Title   string `json:"title"`
 	Body    string `json:"body"`
 	State   string `json:"state"`

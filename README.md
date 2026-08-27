@@ -24,36 +24,42 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 | Secret | Purpose |
 | --- | --- |
 | `CURSOR_API_KEY` | Cursor API; cloud agent create / resume / send |
-| `STUDIO_GITHUB_TOKEN` | Cross-repo GitHub access (see blast radius above) |
+| `STUDIO_GITHUB_TOKEN` | Cross-repo GitHub access / PAT fallback (see blast radius) |
+| `STUDIO_APP_ID` / `STUDIO_APP_PRIVATE_KEY` | Preferred GitHub App token mint |
+
+## Models
+
+| Env | Role | Default |
+| --- | --- | --- |
+| `STUDIO_CURSOR_MODEL` | Implementer | `composer-2.5` |
+| `STUDIO_QC_MODEL` | Intake QC (Phase 5) | falls back to implementer |
+| `STUDIO_REVIEW_MODEL` | PR reviewer (Phase 6) | falls back to QC → implementer |
+
+Per-issue override (all roles): label `model:<id>` or frontmatter `model: <id>`.
 
 ## How to file work
 
 1. Open an issue on **this** repo.
 2. Add a target label:
-   - `repo:<name>` from [`repos.yaml`](./repos.yaml) (e.g. `repo:pad-lab`) — existing allowlisted repo
-   - `new:go-service` — create a private repo from [`template-go-svc`](https://github.com/adamfriedl/template-go-svc), allowlist it, then Start
-3. Optional new-repo name: fill **New repo name** on the issue form, or YAML frontmatter `name:` / `repo:`. Otherwise the title is slugified.
-4. Write a small, testable scope in the body.
-5. Studio starts a cloud agent on the target; agent opens a **draft** PR. You merge.
+   - `repo:<name>` from [`repos.yaml`](./repos.yaml) — existing allowlisted repo
+   - `new:go-service` — create from [`template-go-svc`](https://github.com/adamfriedl/template-go-svc), allowlist, then Start
+3. Optional: **New repo name**, `model:` override, or frontmatter.
+4. Write a small, testable scope.
+5. **Intake QC runs by default.** If `needs-work`, edit the issue and label `spec-ok` or `skip-qc`. If ok, implementer Starts and opens a draft PR.
+6. Watch: CI FollowUp, automated PR review (COMMENT), human review threads → implementer. Merge → studio issue closes as `done`.
 
-For `repo:studio`, prefer allowlist/docs/CLI tweaks over editing `.github/workflows` until watch is solid.
+Escape labels: `skip-qc`, `spec-ok`, `skip-review`.
 
-Labels Studio uses: `working`, `pr-open`, `needs-human`, `done` (plus later QC/review labels — see PRD).
+Other labels: `working`, `pr-open`, `needs-human`, `needs-spec`, `done`.
 
 ## Local CLI
 
 ```bash
 go test ./...
 go run ./cmd/studio doctor --dry-run
+STUDIO_DRY_LABELS=repo:pad-lab,skip-qc go run ./cmd/studio dispatch --issue 1 --dry-run
 STUDIO_DRY_LABELS=repo:pad-lab go run ./cmd/studio dispatch --issue 1 --dry-run
-STUDIO_DRY_LABELS=new:go-service STUDIO_DRY_TITLE='hello notes' go run ./cmd/studio dispatch --issue 99 --dry-run
 ```
-
-Live dispatch needs `CURSOR_API_KEY` + `STUDIO_GITHUB_TOKEN` (or App-minted token in Actions). Workflow: `.github/workflows/dispatch.yml`.
-
-Cursor cloud helper: `scripts/cursor-helper/` (TypeScript wrapper around `@cursor/sdk`).
-
-`doctor --dry-run` prints the catalog and does not call network APIs.
 
 ## Verify
 
@@ -64,4 +70,4 @@ go run ./cmd/studio doctor --dry-run
 
 ## Status
 
-See [`HANDOFF.md`](./HANDOFF.md) for progress and pickup. Spec: [`PRD.md`](./PRD.md) §15.
+See [`HANDOFF.md`](./HANDOFF.md). Spec: [`PRD.md`](./PRD.md).

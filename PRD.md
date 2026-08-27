@@ -496,6 +496,8 @@ A **separate** cloud agent reviews the issue before `Worker.Start`. Same Worker 
 
 Do not start this until Phase 3 has two weeks of real use (§16). Vague issues that still yield PRs are a prompt/catalog problem, not a reason to add this.
 
+**2026-08-27:** Operator chose to proceed to Phase 5/6 before that window (§19).
+
 **Behavior:**
 
 1. `dispatch` (QC on): if `skip-qc` or `spec_status` in `{ok, approved, skipped}` → existing Start path.
@@ -571,3 +573,4 @@ If PRs are rare, fix prompts and catalog — do not add more agents. Intake QC (
 - **2026-08-27:** Intake QC is in scope as Phase 5 (optional). Separate specialist agent; human accepts suggested issue edits; `skip-qc` / `spec-ok` escape hatches. Not a planner–coder chain in one run of one agent.
 - **2026-08-27:** PR reviewer is in scope as Phase 6 (optional). Separate specialist agent; GitHub review on the target PR; SHA + max-2-rounds loop brake; `skip-review` escape hatch. Does not merge. Implementer still owns code follow-ups.
 - **2026-08-27:** GitHub App `adamfriedl-studio`; prefer All-repositories install so Phase 4 new repos inherit App access; catalog whitelist still required before dispatch.
+- **2026-08-27:** Proceed to Phase 5/6 before §16 two-week window. QC on by default; models via role env + per-issue `model:` / `model:` label (no router agent).

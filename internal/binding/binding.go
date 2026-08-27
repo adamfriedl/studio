@@ -16,21 +16,22 @@ var blockRE = regexp.MustCompile(`(?s)<!-- studio:v1\s*(.*?)\s*-->`)
 var ErrCorrupt = fmt.Errorf("binding corrupt")
 
 type Binding struct {
-	AgentID        string
-	Worker         string
-	Repo           string
-	Branch         string
-	PRURL          string
-	PRNumber       string
-	PRStatus       string
-	SpecStatus     string
-	SpecAgentID    string
-	ReviewAgentID  string
-	ReviewSHA      string
-	ReviewRounds   string
-	ReviewStatus   string
-	ReviewCursor   string
-	UpdatedAt      string
+	AgentID       string
+	Worker        string
+	Repo          string
+	Branch        string
+	PRURL         string
+	PRNumber      string
+	PRStatus      string
+	Model         string
+	SpecStatus    string
+	SpecAgentID   string
+	ReviewAgentID string
+	ReviewSHA     string
+	ReviewRounds  string
+	ReviewStatus  string
+	ReviewCursor  string
+	UpdatedAt     string
 }
 
 func Parse(issueBody string) (*Binding, error) {
@@ -68,6 +69,8 @@ func Parse(issueBody string) (*Binding, error) {
 			b.PRNumber = val
 		case "pr_status":
 			b.PRStatus = val
+		case "model":
+			b.Model = val
 		case "spec_status":
 			b.SpecStatus = val
 		case "spec_agent_id":
@@ -114,6 +117,7 @@ func (b *Binding) Render() string {
 	write("pr_url", b.PRURL)
 	write("pr_number", b.PRNumber)
 	write("pr_status", b.PRStatus)
+	write("model", b.Model)
 	write("spec_status", b.SpecStatus)
 	write("spec_agent_id", b.SpecAgentID)
 	write("review_agent_id", b.ReviewAgentID)

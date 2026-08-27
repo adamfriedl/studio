@@ -180,6 +180,24 @@ func watchOne(ctx context.Context, client *gh.Client, cat *catalog.Catalog, stud
 	if len(failed) > 0 {
 		return watchCIFix(ctx, client, cat, studioOwner, studioRepo, issueN, issue, b, owner, repo, pr, failed, dryRun)
 	}
+
+	var labelNames []string
+	for _, l := range issue.Labels {
+		labelNames = append(labelNames, l.Name)
+	}
+	if err := runPRReview(ctx, client, cat, studioOwner, studioRepo, issueN, issue, labelNames, b, owner, repo, pr, dryRun); err != nil {
+		fmt.Fprintf(os.Stderr, "watch #%d pr-review: %v\n", issueN, err)
+		// Continue to human review comments so implementer still sees threads.
+	}
+	// Refresh binding after pr-review may have upserted.
+	if !dryRun {
+		if refreshed, err := client.GetIssue(ctx, studioOwner, studioRepo, issueN); err == nil {
+			issue = refreshed
+			if nb, err := binding.Parse(issue.Body); err == nil {
+				b = nb
+			}
+		}
+	}
 	return watchReviews(ctx, client, cat, studioOwner, studioRepo, issueN, issue, b, owner, repo, pr, dryRun)
 }
 
@@ -264,8 +282,9 @@ func sendWatchPrompt(ctx context.Context, client *gh.Client, cat *catalog.Catalo
 		return fmt.Errorf("CURSOR_API_KEY required")
 	}
 	oldID := b.AgentID
+	model := firstNonEmpty(b.Model, catalog.ResolveModel("implement", nil, ""), catalog.DefaultImplementModel)
 	w := cursor.Helper{Timeout: 45 * time.Minute}
-	res, updated, replaced, err := run.SendOrReplace(ctx, w, b, promptText, envOr("STUDIO_CURSOR_MODEL", "composer-2.5"), cat.AllowsFullName)
+	res, updated, replaced, err := run.SendOrReplace(ctx, w, b, promptText, model, cat.AllowsFullName)
 	if err != nil {
 		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, fmt.Sprintf("Studio: %s FollowUp/replace failed: %v", kind, err))
 		_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})

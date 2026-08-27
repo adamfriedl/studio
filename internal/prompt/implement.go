@@ -6,12 +6,12 @@ import (
 )
 
 type ImplementInput struct {
-	IssueNumber     int
-	Title           string
-	Body            string
-	RepoURL         string
-	Branch          string
-	StudioIssueURL  string
+	IssueNumber    int
+	Title          string
+	Body           string
+	RepoURL        string
+	Branch         string
+	StudioIssueURL string
 }
 
 func Implement(in ImplementInput) string {

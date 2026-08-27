@@ -71,4 +71,6 @@ jobs:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           STUDIO_GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.STUDIO_GITHUB_TOKEN }}
           STUDIO_CURSOR_MODEL: composer-2.5
+          STUDIO_QC_MODEL: composer-2.5
+          STUDIO_REVIEW_MODEL: composer-2.5
         run: go run ./cmd/studio watch ${{ steps.args.outputs.flags }}
