@@ -149,7 +149,22 @@ func watchOne(ctx context.Context, client *gh.Client, cat *catalog.Catalog, stud
 		return nil
 	}
 	if pr.State != "open" {
-		fmt.Printf("#%d: PR %s (not merged) — skip\n", issueN, pr.State)
+		// Closed without merge — do not mark done; human decides abandon vs new PR.
+		fmt.Printf("#%d: PR closed unmerged — needs-human\n", issueN)
+		if dryRun {
+			return nil
+		}
+		b.PRStatus = "closed"
+		body, err := binding.Upsert(issue.Body, b)
+		if err != nil {
+			return err
+		}
+		_ = client.UpdateIssue(ctx, studioOwner, studioRepo, issueN, body, nil)
+		_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})
+		_ = client.RemoveLabel(ctx, studioOwner, studioRepo, issueN, "working")
+		_ = client.RemoveLabel(ctx, studioOwner, studioRepo, issueN, "pr-open")
+		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN,
+			"Studio: target PR was closed without merging — needs-human. Close this issue, or open a new PR and update the binding / re-dispatch.")
 		return nil
 	}
 

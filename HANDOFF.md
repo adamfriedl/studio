@@ -11,7 +11,7 @@ Short pickup note. Spec lives in [`PRD.md`](./PRD.md). App ops: [`docs/github-ap
 | **2–3 (MVP)** | `studio watch`, `watch.yml` (15m + `repository_dispatch`), CI log FollowUp, review-comment FollowUp, close-on-merge. Prefer App token; PAT fallback |
 | **App** | `adamfriedl-studio` install **157096911**; **All repositories** (confirmed). Secrets `STUDIO_APP_ID` / `STUDIO_APP_PRIVATE_KEY` (+ still `CURSOR_API_KEY`, `STUDIO_GITHUB_TOKEN`). Workflows mint App token for `owner: adamfriedl` **without** hardcoded repo list. New repos inherit App access; `repos.yaml` is still the dispatch gate. |
 | **4** | `new:` implemented: create from template → ensure `repo:<name>` label → commit allowlist to `repos.yaml` → `Worker.Start`. Template [`adamfriedl/template-go-svc`](https://github.com/adamfriedl/template-go-svc) (`is_template`); catalog key `go-service`; label `new:go-service`. |
-| **Watch harden** | On FollowUp/resume failure (or missing `agent_id`), `run.SendOrReplace` Starts a new agent on the existing branch, upserts `agent_id`, comments worker replaced. Keeps `branch`/`pr_url`. |
+| **Watch harden** | On FollowUp/resume failure (or missing `agent_id`), `run.SendOrReplace` Starts a new agent on the existing branch, upserts `agent_id`, comments worker replaced. Keeps `branch`/`pr_url`. Closed-unmerged PR → `needs-human`, issue stays open. |
 
 **Allowlist today:** `pad-lab`, `studio`, `job-search`, `homelab`, `adamfriedl.github.io`, `intake-desk`. Default model `composer-2.5` via `STUDIO_CURSOR_MODEL`.
 

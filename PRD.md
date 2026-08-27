@@ -98,7 +98,7 @@ this repo (issues + CLI + workflows)
 | --- | --- |
 | `working` | Worker started |
 | `pr-open` | Binding has `pr_url` |
-| `needs-human` | Unknown repo, create failed, CI failed with no logs, binding parse failure, or unparseable agent structured output after retry |
+| `needs-human` | Unknown repo, create failed, CI failed with no logs, binding parse failure, unparseable agent structured output after retry, or **target PR closed without merge** |
 | `needs-spec` | Intake QC found holes; do not Start until `spec-ok` or `skip-qc` |
 | `spec-ok` | Human accepted the spec (original or after edits); dispatch may Start |
 | `skip-qc` | Bypass intake; dispatch may Start |
@@ -374,9 +374,12 @@ v1: fold into `watch` — pull new review comments after `review_cursor`. Dedica
 
 Phase 6: same `watch` tick, after CI is green (or the PR has no checks), `studio pr-review --issue N`. If in the same run, `studio review` so the implementer sees those comments without waiting another poll. Do not pr-review when CI is red — that is the implementer CI-fix path.
 
-### Close on merge
+### Close on merge / closed unmerged
 
-Same `watch` path (dispatch or poll): if the bound PR is merged, close the issue, label `done`, remove `working`. Prefer `studio-pr-merged` dispatch over waiting for the schedule.
+Same `watch` path (dispatch or poll):
+
+- Bound PR **merged** → close the studio issue, label `done`, remove `working` / `pr-open`. Prefer `studio-pr-merged` dispatch over waiting for the schedule.
+- Bound PR **closed without merge** → set `pr_status: closed`, remove `working` / `pr-open`, label `needs-human`, leave the studio issue **open**. Do not mark `done`. Human abandons or opens a new PR.
 
 ## 11. CLI
 
