@@ -8,3 +8,5 @@
 .env.*
 !.env.example
 /tmp/
+node_modules/
+scripts/cursor-spike/node_modules/
