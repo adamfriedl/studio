@@ -28,6 +28,8 @@ func main() {
 		os.Exit(cmdDoctor(os.Args[2:]))
 	case "dispatch":
 		os.Exit(cmdDispatch(os.Args[2:]))
+	case "watch":
+		os.Exit(cmdWatch(os.Args[2:]))
 	case "help", "-h", "--help":
 		usage()
 	default:
@@ -43,6 +45,7 @@ func usage() {
 Usage:
   studio doctor [--dry-run] [--catalog PATH]
   studio dispatch --issue N [--dry-run] [--catalog PATH] [--owner O] [--repo R]
+  studio watch [--issue N] [--dry-run] [--catalog PATH]
 
 Exit: 0 ok; 1 config/auth; 2 worker failed; 3 needs-human
 `)

@@ -1,19 +1,19 @@
-name: dispatch
+name: watch
 
 on:
-  # Only "labeled" — not "opened". Open then add repo:/new: → one run.
-  # Adding working/pr-open also fires labeled, but the job if skips those.
-  issues:
-    types: [labeled]
+  schedule:
+    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       issue_number:
-        description: Studio issue number
-        required: true
-        type: number
+        description: Optional single issue (empty = all pr-open)
+        required: false
+        type: string
+  repository_dispatch:
+    types: [studio-ci-failed, studio-pr-merged]
 
 concurrency:
-  group: studio-${{ github.event.issue.number || inputs.issue_number }}
+  group: studio-watch-${{ github.event.client_payload.issue_number || inputs.issue_number || 'all' }}
   cancel-in-progress: false
 
 permissions:
@@ -21,16 +21,8 @@ permissions:
   issues: write
 
 jobs:
-  dispatch:
+  watch:
     runs-on: ubuntu-latest
-    # Skip noise labels (working, pr-open, needs-human, …) at the job gate —
-    # no checkout / npm / agent. Manual workflow_dispatch always runs.
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' &&
-       github.event.issue.state == 'open' &&
-       (startsWith(github.event.label.name, 'repo:') ||
-        startsWith(github.event.label.name, 'new:')))
     steps:
       - uses: actions/checkout@v4
 
@@ -58,18 +50,24 @@ jobs:
         working-directory: scripts/cursor-helper
         run: npm ci
 
-      - name: Resolve issue number
-        id: issue
+      - name: Resolve issue arg
+        id: args
         run: |
+          N=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "n=${{ inputs.issue_number }}" >> "$GITHUB_OUTPUT"
+            N="${{ inputs.issue_number }}"
+          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            N="${{ github.event.client_payload.issue_number }}"
+          fi
+          if [ -n "$N" ]; then
+            echo "flags=--issue $N" >> "$GITHUB_OUTPUT"
           else
-            echo "n=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+            echo "flags=" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: studio dispatch
+      - name: studio watch
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           STUDIO_GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.STUDIO_GITHUB_TOKEN }}
           STUDIO_CURSOR_MODEL: composer-2.5
-        run: go run ./cmd/studio dispatch --issue "${{ steps.issue.outputs.n }}"
+        run: go run ./cmd/studio watch ${{ steps.args.outputs.flags }}
