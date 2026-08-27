@@ -19,8 +19,8 @@ Short pickup note. Spec lives in [`PRD.md`](./PRD.md). App ops: [`docs/github-ap
 ## Operator TODO (optional)
 
 - Apply [`docs/target-hook.md`](./docs/target-hook.md) on a pilot target (homelab) so watch is event-driven; poll stays backstop.
-- Grant App **Administration: write** so `new:` generate can drop the PAT fallback (`STUDIO_GITHUB_PAT`).
 
+App **Administration: write** granted (2026-08-27) — App token can `POST …/generate`; PAT fallback remains as safety net only.
 ## Pick up here
 
 1. **Watch hardening** (PRD §15 Phase 2 leftover): replace agent on resume failure; keep binding single-writer discipline.
