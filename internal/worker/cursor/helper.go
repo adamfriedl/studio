@@ -87,12 +87,21 @@ func (h Helper) run(ctx context.Context, args []string, prompt string) (helperOu
 		return helperOut{}, fmt.Errorf("cursor helper: decode output: %w; stdout=%s", decErr, stdout.String())
 	}
 	if err != nil && out.Error == "" {
-		out.Error = err.Error()
+		out.Error = firstNonEmpty(out.Message, err.Error())
 	}
-	if !out.OK && out.Error == "" && err != nil {
-		out.Error = stderr.String()
+	if !out.OK && out.Error == "" {
+		out.Error = firstNonEmpty(out.Message, strings.TrimSpace(stderr.String()), "helper failed")
 	}
 	return out, err
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 func (h Helper) Ping(ctx context.Context) error {
@@ -130,11 +139,12 @@ func (h Helper) Start(ctx context.Context, req worker.StartReq) (worker.Result, 
 		if res.Status == "" {
 			res.Status = "error"
 		}
-		return res, fmt.Errorf("cursor start: %w (%s)", err, out.Error)
+		detail := firstNonEmpty(out.Error, out.Message)
+		return res, fmt.Errorf("cursor start: %w (%s)", err, detail)
 	}
 	if !out.OK {
 		res.Status = "error"
-		return res, fmt.Errorf("cursor start: %s", out.Error)
+		return res, fmt.Errorf("cursor start: %s", firstNonEmpty(out.Error, out.Message, "unknown"))
 	}
 	return res, nil
 }

@@ -79,6 +79,7 @@ async function create(args: string[]) {
   const result = await run.wait();
   const git = (result as { git?: { branches?: Array<{ prUrl?: string; branch?: string }> } }).git;
   const branchInfo = git?.branches?.[0];
+  const resultText = typeof result.result === "string" ? result.result : undefined;
 
   emit(
     {
@@ -88,7 +89,8 @@ async function create(args: string[]) {
       status: result.status,
       prURL: branchInfo?.prUrl,
       branch: branchInfo?.branch,
-      message: typeof result.result === "string" ? result.result : undefined,
+      message: resultText,
+      error: result.status === "error" ? resultText || "agent run status=error" : undefined,
     },
     result.status === "error" ? 2 : 0,
   );
@@ -105,6 +107,7 @@ async function followup(args: string[]) {
   const result = await run.wait();
   const git = (result as { git?: { branches?: Array<{ prUrl?: string; branch?: string }> } }).git;
   const branchInfo = git?.branches?.[0];
+  const resultText = typeof result.result === "string" ? result.result : undefined;
 
   emit(
     {
@@ -114,7 +117,8 @@ async function followup(args: string[]) {
       status: result.status,
       prURL: branchInfo?.prUrl,
       branch: branchInfo?.branch,
-      message: typeof result.result === "string" ? result.result : undefined,
+      message: resultText,
+      error: result.status === "error" ? resultText || "agent run status=error" : undefined,
     },
     result.status === "error" ? 2 : 0,
   );
