@@ -333,7 +333,8 @@ func provisionNewRepo(ctx context.Context, client *gh.Client, c *catalog.Catalog
 		return fmt.Errorf("repo name %q is a template source — pick another name", name)
 	}
 
-	repo, err := client.CreateFromTemplate(ctx, templateFrom, c.Org, name, true)
+	createClient := clientForRepoCreate(client)
+	repo, err := createClient.CreateFromTemplate(ctx, templateFrom, c.Org, name, true)
 	created := err == nil
 	if err != nil {
 		if err != gh.ErrRepoExists {
@@ -380,6 +381,17 @@ func provisionNewRepo(ctx context.Context, client *gh.Client, c *catalog.Catalog
 			fmt.Sprintf("Studio: reusing allowlisted `%s` (already existed).", repo.FullName))
 	}
 	return nil
+}
+
+// clientForRepoCreate prefers STUDIO_GITHUB_PAT for template generate (App tokens often
+// lack administration:write until the permission is granted on the install).
+func clientForRepoCreate(primary *gh.Client) *gh.Client {
+	pat := strings.TrimSpace(os.Getenv("STUDIO_GITHUB_PAT"))
+	if pat == "" || primary == nil || pat == primary.Token {
+		return primary
+	}
+	fmt.Println("new: using STUDIO_GITHUB_PAT for template generate")
+	return &gh.Client{Token: pat, BaseURL: primary.BaseURL, HTTPClient: primary.HTTPClient, UserAgent: primary.UserAgent}
 }
 
 func writeLocalCatalog(path string, content []byte) error {

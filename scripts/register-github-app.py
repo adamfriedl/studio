@@ -42,6 +42,7 @@ MANIFEST = {
     },
     "default_permissions": {
         "metadata": "read",
+        "administration": "write",  # create repo from template (Phase 4 new:)
         "contents": "write",
         "issues": "write",
         "pull_requests": "write",

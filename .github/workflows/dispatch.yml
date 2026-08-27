@@ -73,5 +73,7 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           STUDIO_GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.STUDIO_GITHUB_TOKEN }}
+          # Classic PAT — used only for new: template generate if the App lacks administration.
+          STUDIO_GITHUB_PAT: ${{ secrets.STUDIO_GITHUB_TOKEN }}
           STUDIO_CURSOR_MODEL: composer-2.5
         run: go run ./cmd/studio dispatch --issue "${{ steps.issue.outputs.n }}"

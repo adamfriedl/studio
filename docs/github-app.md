@@ -29,16 +29,23 @@ Configure: https://github.com/settings/installations/157096911 → Repository ac
 | Permission | Access |
 | --- | --- |
 | metadata | read |
+| **administration** | **write** (required to `POST …/generate` for Phase 4 `new:`) |
 | contents | write |
 | issues | write |
 | pull_requests | write |
 | checks | read |
 | actions | read |
 
+If generate returns `403 Resource not accessible by integration`, open  
+https://github.com/settings/apps/adamfriedl-studio → **Permissions & events** → Repository → **Administration: Read and write** → Save → accept the permission request on the installation.
+
+Until that is approved, dispatch passes the classic PAT as `STUDIO_GITHUB_PAT` and Studio uses it **only** for template generate.
+
 ## Runtime
 
 Workflows mint a short-lived installation token via `actions/create-github-app-token` for owner `adamfriedl` (all repos the install can see).  
-Falls back to `STUDIO_GITHUB_TOKEN` (PAT) if App secrets are missing.
+Falls back to `STUDIO_GITHUB_TOKEN` (PAT) if App secrets are missing.  
+`STUDIO_GITHUB_PAT` (same PAT secret) is used for `new:` repo create when the App lacks administration.
 
 ## Phase 4 (`new:`) — required behavior
 
