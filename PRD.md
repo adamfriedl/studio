@@ -573,4 +573,4 @@ If PRs are rare, fix prompts and catalog — do not add more agents. Intake QC (
 - **2026-08-27:** Intake QC is in scope as Phase 5 (optional). Separate specialist agent; human accepts suggested issue edits; `skip-qc` / `spec-ok` escape hatches. Not a planner–coder chain in one run of one agent.
 - **2026-08-27:** PR reviewer is in scope as Phase 6 (optional). Separate specialist agent; GitHub review on the target PR; SHA + max-2-rounds loop brake; `skip-review` escape hatch. Does not merge. Implementer still owns code follow-ups.
 - **2026-08-27:** GitHub App `adamfriedl-studio`; prefer All-repositories install so Phase 4 new repos inherit App access; catalog whitelist still required before dispatch.
-- **2026-08-27:** Proceed to Phase 5/6 before §16 two-week window. QC on by default; models via role env + per-issue `model:` / `model:` label (no router agent).
+- **2026-08-27:** Proceed to Phase 5/6 before §16 two-week window. QC on by default; models via role env + per-issue `model:` / `model:` label (no router agent). **Allowlist = Cursor Models pool only:** `composer-2.5`, `grok-4.5`, `grok-4.6` (cost).

@@ -29,13 +29,16 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 
 ## Models
 
-| Env | Role | Default |
-| --- | --- | --- |
-| `STUDIO_CURSOR_MODEL` | Implementer | `composer-2.5` |
-| `STUDIO_QC_MODEL` | Intake QC (Phase 5) | falls back to implementer |
-| `STUDIO_REVIEW_MODEL` | PR reviewer (Phase 6) | falls back to QC → implementer |
+Studio only allows the **Cursor Models** pool (included generous usage on paid plans) — not third-party API-priced models:
 
-Per-issue override (all roles): label `model:<id>` or frontmatter `model: <id>`.
+| ID | Notes |
+| --- | --- |
+| `composer-2.5` | Default implementer / QC / review |
+| `grok-4.5` | Cursor Grok |
+| `grok-4.6` | Cursor Grok |
+
+Env: `STUDIO_CURSOR_MODEL` / `STUDIO_QC_MODEL` / `STUDIO_REVIEW_MODEL` (must be one of the above).  
+Per-issue: label `model:grok-4.5`, frontmatter `model:`, or the issue-form dropdown. Invalid IDs fall back to `composer-2.5`.
 
 ## How to file work
 

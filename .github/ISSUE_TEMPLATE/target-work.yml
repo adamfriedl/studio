@@ -8,7 +8,7 @@ body:
         After filing, add a label:
         - `repo:pad-lab` / `repo:studio` / … from `repos.yaml`
         - `new:go-service` to create from the Go template
-        Optional: `skip-qc`, `skip-review`, or `model:<cursor-model-id>`
+        Optional: `skip-qc`, `skip-review`, or `model:composer-2.5` / `model:grok-4.5` / `model:grok-4.6` (included pool only)
   - type: textarea
     id: summary
     attributes:
@@ -25,12 +25,16 @@ body:
       placeholder: notes-api
     validations:
       required: false
-  - type: input
+  - type: dropdown
     id: model
     attributes:
-      label: Cursor model (optional)
-      description: Overrides STUDIO_*_MODEL for this issue (e.g. composer-2.5). Also settable as label model:…
-      placeholder: composer-2.5
+      label: Cursor model
+      description: Included Cursor Models pool only (cost). Override via label model:… if needed.
+      options:
+        - composer-2.5
+        - grok-4.5
+        - grok-4.6
+      default: 0
     validations:
       required: false
   - type: textarea

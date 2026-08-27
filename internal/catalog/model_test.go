@@ -6,9 +6,6 @@ import (
 )
 
 func TestResolveModelDefaults(t *testing.T) {
-	t.Setenv("STUDIO_CURSOR_MODEL", "")
-	t.Setenv("STUDIO_QC_MODEL", "")
-	t.Setenv("STUDIO_REVIEW_MODEL", "")
 	_ = os.Unsetenv("STUDIO_CURSOR_MODEL")
 	_ = os.Unsetenv("STUDIO_QC_MODEL")
 	_ = os.Unsetenv("STUDIO_REVIEW_MODEL")
@@ -21,25 +18,35 @@ func TestResolveModelDefaults(t *testing.T) {
 }
 
 func TestResolveModelChain(t *testing.T) {
-	t.Setenv("STUDIO_CURSOR_MODEL", "impl-model")
-	t.Setenv("STUDIO_QC_MODEL", "qc-model")
+	t.Setenv("STUDIO_CURSOR_MODEL", "composer-2.5")
+	t.Setenv("STUDIO_QC_MODEL", "grok-4.5")
 	t.Setenv("STUDIO_REVIEW_MODEL", "")
-	if got := ResolveModel("review", nil, ""); got != "qc-model" {
+	if got := ResolveModel("review", nil, ""); got != "grok-4.5" {
 		t.Fatalf("review fallback: %q", got)
 	}
-	t.Setenv("STUDIO_REVIEW_MODEL", "rev-model")
-	if got := ResolveModel("review", nil, ""); got != "rev-model" {
+	t.Setenv("STUDIO_REVIEW_MODEL", "grok-4.6")
+	if got := ResolveModel("review", nil, ""); got != "grok-4.6" {
 		t.Fatalf("review: %q", got)
 	}
 }
 
 func TestResolveModelOverride(t *testing.T) {
-	t.Setenv("STUDIO_CURSOR_MODEL", "impl-model")
-	if got := ResolveModel("implement", []string{"model:gpt-5"}, ""); got != "gpt-5" {
+	t.Setenv("STUDIO_CURSOR_MODEL", "composer-2.5")
+	if got := ResolveModel("implement", []string{"model:grok-4.5"}, ""); got != "grok-4.5" {
 		t.Fatalf("label: %q", got)
 	}
-	if got := ResolveModel("qc", nil, "---\nmodel: opus\n---\nbody"); got != "opus" {
+	if got := ResolveModel("qc", nil, "---\nmodel: grok-4.6\n---\nbody"); got != "grok-4.6" {
 		t.Fatalf("frontmatter: %q", got)
+	}
+}
+
+func TestNormalizeModelRejectsThirdParty(t *testing.T) {
+	_, err := NormalizeModel("claude-opus-5")
+	if err == nil {
+		t.Fatal("expected reject")
+	}
+	if got := ResolveModel("implement", []string{"model:claude-opus-5"}, ""); got != DefaultImplementModel {
+		t.Fatalf("fallback: %q", got)
 	}
 }
 

@@ -242,6 +242,11 @@ func cmdDispatch(args []string) int {
 	studioIssueURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d", studioOwner, studioRepo, *issueN)
 	implModel := catalog.ResolveModel("implement", labelNames, stripBinding(issue.Body))
 	qcModel := catalog.ResolveModel("qc", labelNames, stripBinding(issue.Body))
+	if o := catalog.ModelOverride(labelNames, stripBinding(issue.Body)); o != "" {
+		if _, err := catalog.NormalizeModel(o); err != nil {
+			fmt.Fprintf(os.Stderr, "model override %q rejected — using included pool (%s)\n", o, implModel)
+		}
+	}
 
 	var existingBind *binding.Binding
 	if b, err := binding.Parse(issue.Body); err == nil {
