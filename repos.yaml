@@ -1,0 +1,8 @@
+org: adamfriedl
+defaults:
+  branchPrefix: studio/
+  draftPR: true
+templates: {}
+repos:
+  - name: pad-lab
+    # owner defaults to org

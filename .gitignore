@@ -1,0 +1,10 @@
+# bin/
+/studio
+*.exe
+*.test
+*.out
+.DS_Store
+.env
+.env.*
+!.env.example
+/tmp/
