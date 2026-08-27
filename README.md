@@ -35,7 +35,12 @@ Labels Studio uses: `working`, `pr-open`, `needs-human`, `done` (plus later QC/r
 ```bash
 go test ./...
 go run ./cmd/studio doctor --dry-run
+STUDIO_DRY_LABELS=repo:pad-lab go run ./cmd/studio dispatch --issue 1 --dry-run
 ```
+
+Live dispatch needs `CURSOR_API_KEY` + `STUDIO_GITHUB_TOKEN`. Actions workflow: `.github/workflows/dispatch.yml`.
+
+Cursor cloud helper: `scripts/cursor-helper/` (TypeScript wrapper around `@cursor/sdk`).
 
 `doctor --dry-run` prints the catalog and does not call network APIs.
 

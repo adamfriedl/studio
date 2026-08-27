@@ -1,0 +1,75 @@
+name: dispatch
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Studio issue number
+        required: true
+        type: number
+
+concurrency:
+  group: studio-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && github.event.issue.state == 'open')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: scripts/cursor-helper/package-lock.json
+
+      - name: Install cursor helper deps
+        working-directory: scripts/cursor-helper
+        run: npm ci
+
+      - name: Resolve issue number
+        id: issue
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "n=${{ inputs.issue_number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "n=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip without repo/new label
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.STUDIO_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          N="${{ steps.issue.outputs.n }}"
+          LABELS=$(gh api "repos/${{ github.repository }}/issues/${N}" --jq '[.labels[].name] | join(",")')
+          echo "labels=$LABELS"
+          if echo "$LABELS" | grep -Eq '(^|,)repo:|(^|,)new:'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No repo:/new: label — skipping"
+          fi
+
+      - name: studio dispatch
+        if: steps.gate.outputs.run == 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          STUDIO_GITHUB_TOKEN: ${{ secrets.STUDIO_GITHUB_TOKEN }}
+          STUDIO_CURSOR_MODEL: composer-2.5
+        run: go run ./cmd/studio dispatch --issue "${{ steps.issue.outputs.n }}"

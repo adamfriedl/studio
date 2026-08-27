@@ -1,0 +1,24 @@
+name: Target work
+description: File work for Studio to run a Cursor Cloud agent on an allowlisted repo
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Add a label `repo:pad-lab` (or another name from `repos.yaml`) after filing.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What to do
+      description: Small, testable scope. Studio will open a draft PR on the target.
+      placeholder: Fix X so that Y…
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Done when
+      placeholder: |
+        - …
+    validations:
+      required: false
