@@ -13,7 +13,8 @@ on:
     types: [studio-ci-failed, studio-pr-merged]
 
 concurrency:
-  group: studio-watch-${{ github.event.client_payload.issue_number || inputs.issue_number || 'all' }}
+  # One watch at a time — schedule + repository_dispatch must not race the same issue.
+  group: studio-watch
   cancel-in-progress: false
 
 permissions:

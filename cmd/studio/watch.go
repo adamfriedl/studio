@@ -13,7 +13,7 @@ import (
 	"github.com/adamfriedl/studio/internal/catalog"
 	gh "github.com/adamfriedl/studio/internal/github"
 	"github.com/adamfriedl/studio/internal/prompt"
-	"github.com/adamfriedl/studio/internal/worker"
+	"github.com/adamfriedl/studio/internal/run"
 	"github.com/adamfriedl/studio/internal/worker/cursor"
 )
 
@@ -63,7 +63,7 @@ func cmdWatch(args []string) int {
 
 	code := 0
 	for _, n := range numbers {
-		if err := watchOne(ctx, client, studioOwner, studioRepo, n, *dryRun); err != nil {
+		if err := watchOne(ctx, client, c, studioOwner, studioRepo, n, *dryRun); err != nil {
 			fmt.Fprintf(os.Stderr, "watch #%d: %v\n", n, err)
 			code = 1
 		}
@@ -94,7 +94,7 @@ func resolveStudioRepo(owner, repo, org string) (string, string) {
 	return owner, repo
 }
 
-func watchOne(ctx context.Context, client *gh.Client, studioOwner, studioRepo string, issueN int, dryRun bool) error {
+func watchOne(ctx context.Context, client *gh.Client, cat *catalog.Catalog, studioOwner, studioRepo string, issueN int, dryRun bool) error {
 	issue, err := client.GetIssue(ctx, studioOwner, studioRepo, issueN)
 	if err != nil {
 		return err
@@ -109,6 +109,13 @@ func watchOne(ctx context.Context, client *gh.Client, studioOwner, studioRepo st
 	}
 	if b.PRURL == "" || b.Repo == "" {
 		return fmt.Errorf("binding missing pr_url/repo")
+	}
+	if !cat.AllowsFullName(b.Repo) {
+		if !dryRun {
+			_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, "Studio watch: binding repo not in catalog allowlist — needs-human: "+b.Repo)
+			_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})
+		}
+		return fmt.Errorf("repo %q not allowlisted", b.Repo)
 	}
 	owner, repo, err := gh.ParseOwnerRepo(b.Repo)
 	if err != nil {
@@ -156,18 +163,12 @@ func watchOne(ctx context.Context, client *gh.Client, studioOwner, studioRepo st
 	}
 	failed := gh.FailedChecks(checks)
 	if len(failed) > 0 {
-		return watchCIFix(ctx, client, studioOwner, studioRepo, issueN, issue, b, owner, repo, pr, failed, dryRun)
+		return watchCIFix(ctx, client, cat, studioOwner, studioRepo, issueN, issue, b, owner, repo, pr, failed, dryRun)
 	}
-	return watchReviews(ctx, client, studioOwner, studioRepo, issueN, issue, b, owner, repo, pr, dryRun)
+	return watchReviews(ctx, client, cat, studioOwner, studioRepo, issueN, issue, b, owner, repo, pr, dryRun)
 }
 
-func watchCIFix(ctx context.Context, client *gh.Client, studioOwner, studioRepo string, issueN int, issue *gh.Issue, b *binding.Binding, owner, repo string, pr *gh.PullRequest, failed []gh.CheckRun, dryRun bool) error {
-	if b.AgentID == "" {
-		if !dryRun {
-			_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})
-		}
-		return fmt.Errorf("CI failed but no agent_id")
-	}
+func watchCIFix(ctx context.Context, client *gh.Client, cat *catalog.Catalog, studioOwner, studioRepo string, issueN int, issue *gh.Issue, b *binding.Binding, owner, repo string, pr *gh.PullRequest, failed []gh.CheckRun, dryRun bool) error {
 	var list strings.Builder
 	for _, f := range failed {
 		fmt.Fprintf(&list, "- %s (%s) %s\n", f.Name, f.Conclusion, f.HTMLURL)
@@ -184,32 +185,24 @@ func watchCIFix(ctx context.Context, client *gh.Client, studioOwner, studioRepo 
 		}
 		return nil
 	}
+	if b.Branch == "" {
+		b.Branch = pr.Head.Ref
+	}
 	p := prompt.CIFix(prompt.CIFixInput{
 		PRURL:       pr.HTMLURL,
 		SHA:         pr.Head.SHA,
 		CheckList:   list.String(),
 		LogExcerpts: logs,
 	})
-	fmt.Printf("#%d: CI FollowUp → %s\n", issueN, b.AgentID)
+	fmt.Printf("#%d: CI FollowUp → %s\n", issueN, firstNonEmpty(b.AgentID, "(replace)"))
 	if dryRun {
 		fmt.Println(p)
 		return nil
 	}
-	if strings.TrimSpace(os.Getenv("CURSOR_API_KEY")) == "" {
-		return fmt.Errorf("CURSOR_API_KEY required")
-	}
-	w := cursor.Helper{Timeout: 45 * time.Minute}
-	res, err := w.FollowUp(ctx, worker.FollowUpReq{AgentID: b.AgentID, Prompt: p})
-	if err != nil {
-		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, fmt.Sprintf("Studio: CI FollowUp failed: %v", err))
-		_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})
-		return err
-	}
-	_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, fmt.Sprintf("Studio: sent CI FollowUp (run `%s`, status %s)", res.RunID, res.Status))
-	return nil
+	return sendWatchPrompt(ctx, client, cat, studioOwner, studioRepo, issueN, issue, b, p, "CI", "")
 }
 
-func watchReviews(ctx context.Context, client *gh.Client, studioOwner, studioRepo string, issueN int, issue *gh.Issue, b *binding.Binding, owner, repo string, pr *gh.PullRequest, dryRun bool) error {
+func watchReviews(ctx context.Context, client *gh.Client, cat *catalog.Catalog, studioOwner, studioRepo string, issueN int, issue *gh.Issue, b *binding.Binding, owner, repo string, pr *gh.PullRequest, dryRun bool) error {
 	comments, err := client.ListPRReviewComments(ctx, owner, repo, pr.Number)
 	if err != nil {
 		return err
@@ -233,35 +226,64 @@ func watchReviews(ctx context.Context, client *gh.Client, studioOwner, studioRep
 		fmt.Printf("#%d: no new review comments\n", issueN)
 		return nil
 	}
-	if b.AgentID == "" {
-		return fmt.Errorf("review comments but no agent_id")
+	if b.Branch == "" {
+		b.Branch = pr.Head.Ref
 	}
 	var body strings.Builder
 	for _, cmt := range fresh {
 		fmt.Fprintf(&body, "- @%s on %s:%d (%s):\n  %s\n", cmt.User.Login, cmt.Path, cmt.Line, cmt.HTMLURL, strings.TrimSpace(cmt.Body))
 	}
 	p := prompt.Review(prompt.ReviewInput{PRURL: pr.HTMLURL, Comments: body.String()})
-	fmt.Printf("#%d: review FollowUp (%d comments) → %s\n", issueN, len(fresh), b.AgentID)
+	fmt.Printf("#%d: review FollowUp (%d comments) → %s\n", issueN, len(fresh), firstNonEmpty(b.AgentID, "(replace)"))
 	if dryRun {
 		fmt.Println(p)
 		return nil
 	}
+	return sendWatchPrompt(ctx, client, cat, studioOwner, studioRepo, issueN, issue, b, p, "review", strconv.FormatInt(maxID, 10))
+}
+
+// sendWatchPrompt FollowUps the implementer, or replaces the agent on the existing branch if resume fails.
+// If reviewCursor is non-empty, upserts it in the same binding write (with agent_id on replace).
+func sendWatchPrompt(ctx context.Context, client *gh.Client, cat *catalog.Catalog, studioOwner, studioRepo string, issueN int, issue *gh.Issue, b *binding.Binding, promptText, kind, reviewCursor string) error {
 	if strings.TrimSpace(os.Getenv("CURSOR_API_KEY")) == "" {
 		return fmt.Errorf("CURSOR_API_KEY required")
 	}
+	oldID := b.AgentID
 	w := cursor.Helper{Timeout: 45 * time.Minute}
-	res, err := w.FollowUp(ctx, worker.FollowUpReq{AgentID: b.AgentID, Prompt: p})
+	res, updated, replaced, err := run.SendOrReplace(ctx, w, b, promptText, envOr("STUDIO_CURSOR_MODEL", "composer-2.5"), cat.AllowsFullName)
 	if err != nil {
-		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, fmt.Sprintf("Studio: review FollowUp failed: %v", err))
+		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, fmt.Sprintf("Studio: %s FollowUp/replace failed: %v", kind, err))
 		_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})
 		return err
 	}
-	b.ReviewCursor = strconv.FormatInt(maxID, 10)
-	newBody, err := binding.Upsert(issue.Body, b)
-	if err != nil {
-		return err
+	if reviewCursor != "" {
+		updated.ReviewCursor = reviewCursor
 	}
-	_ = client.UpdateIssue(ctx, studioOwner, studioRepo, issueN, newBody, nil)
-	_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, fmt.Sprintf("Studio: sent review FollowUp (run `%s`, status %s)", res.RunID, res.Status))
+	if replaced || reviewCursor != "" {
+		fresh, err := client.GetIssue(ctx, studioOwner, studioRepo, issueN)
+		if err != nil {
+			_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})
+			return err
+		}
+		newBody, err := binding.Upsert(fresh.Body, updated)
+		if err != nil {
+			_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, "Studio: binding corrupt after watch — needs-human: "+err.Error())
+			_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})
+			return err
+		}
+		if err := client.UpdateIssue(ctx, studioOwner, studioRepo, issueN, newBody, nil); err != nil {
+			_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, fmt.Sprintf("Studio: failed to persist binding after %s (agent `%s`) — needs-human: %v", kind, updated.AgentID, err))
+			_ = client.AddLabels(ctx, studioOwner, studioRepo, issueN, []string{"needs-human"})
+			return err
+		}
+	}
+	if replaced {
+		msg := fmt.Sprintf("Studio: worker replaced (`%s` → `%s`) after resume failure; sent %s prompt (run `%s`, status %s)",
+			firstNonEmpty(oldID, "none"), updated.AgentID, kind, res.RunID, res.Status)
+		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, msg)
+		fmt.Println(msg)
+		return nil
+	}
+	_ = client.AddComment(ctx, studioOwner, studioRepo, issueN, fmt.Sprintf("Studio: sent %s FollowUp (run `%s`, status %s)", kind, res.RunID, res.Status))
 	return nil
 }

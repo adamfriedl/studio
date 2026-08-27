@@ -35,7 +35,14 @@ repos:
 	if !ok || full != "otheruser/boomlab" {
 		t.Fatalf("boomlab: got %q ok=%v", full, ok)
 	}
-	if _, ok := c.FullName("missing"); ok {
+	_, ok = c.FullName("missing")
+	if ok {
 		t.Fatal("expected missing to fail")
+	}
+	if !c.AllowsFullName("adamfriedl/pad-lab") || !c.AllowsFullName("https://github.com/adamfriedl/pad-lab") {
+		t.Fatal("expected pad-lab allowlisted")
+	}
+	if c.AllowsFullName("evil/x") {
+		t.Fatal("expected evil/x rejected")
 	}
 }

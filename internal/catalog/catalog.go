@@ -3,6 +3,7 @@ package catalog
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -66,4 +67,20 @@ func (c *Catalog) FullName(name string) (string, bool) {
 		return "", false
 	}
 	return owner + "/" + repo, true
+}
+
+// AllowsFullName reports whether owner/repo (or https URL) is in the allowlist.
+func (c *Catalog) AllowsFullName(full string) bool {
+	full = strings.TrimSpace(full)
+	full = strings.TrimPrefix(full, "https://github.com/")
+	full = strings.TrimSuffix(full, ".git")
+	if full == "" {
+		return false
+	}
+	for _, r := range c.Repos {
+		if n, ok := c.FullName(r.Name); ok && n == full {
+			return true
+		}
+	}
+	return false
 }
