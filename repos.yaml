@@ -5,6 +5,9 @@ defaults:
 templates: {}
 repos:
   - name: pad-lab
-    # owner defaults to org
   - name: studio
     # self-target: allowlist / harness changes via draft PR (merge carefully)
+  - name: job-search
+  - name: homelab
+  - name: adamfriedl.github.io
+  - name: intake-desk

@@ -14,6 +14,10 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 | --- | --- |
 | `pad-lab` | [adamfriedl/pad-lab](https://github.com/adamfriedl/pad-lab) |
 | `studio` | [adamfriedl/studio](https://github.com/adamfriedl/studio) (self — harness/allowlist PRs; review workflows carefully) |
+| `job-search` | [adamfriedl/job-search](https://github.com/adamfriedl/job-search) |
+| `homelab` | [adamfriedl/homelab](https://github.com/adamfriedl/homelab) |
+| `adamfriedl.github.io` | [adamfriedl/adamfriedl.github.io](https://github.com/adamfriedl/adamfriedl.github.io) |
+| `intake-desk` | [adamfriedl/intake-desk](https://github.com/adamfriedl/intake-desk) |
 
 ## Required secrets (Actions)
 
@@ -25,7 +29,7 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 ## How to file work
 
 1. Open an issue on **this** repo.
-2. Add label `repo:pad-lab` or `repo:studio` (self) — names from `repos.yaml`.
+2. Add a `repo:<name>` label from `repos.yaml` (e.g. `repo:pad-lab`, `repo:studio`, `repo:job-search`, …).
 3. Write a small, testable scope in the body.
 4. Studio starts a cloud agent on the target; agent opens a **draft** PR. You merge.
 
