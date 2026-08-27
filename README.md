@@ -29,9 +29,12 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 ## How to file work
 
 1. Open an issue on **this** repo.
-2. Add a `repo:<name>` label from `repos.yaml` (e.g. `repo:pad-lab`, `repo:studio`, `repo:job-search`, …). That label is what starts dispatch — opening alone does not.
-3. Write a small, testable scope in the body.
-4. Studio starts a cloud agent on the target; agent opens a **draft** PR. You merge.
+2. Add a target label:
+   - `repo:<name>` from [`repos.yaml`](./repos.yaml) (e.g. `repo:pad-lab`) — existing allowlisted repo
+   - `new:go-service` — create a private repo from [`template-go-svc`](https://github.com/adamfriedl/template-go-svc), allowlist it, then Start
+3. Optional new-repo name: fill **New repo name** on the issue form, or YAML frontmatter `name:` / `repo:`. Otherwise the title is slugified.
+4. Write a small, testable scope in the body.
+5. Studio starts a cloud agent on the target; agent opens a **draft** PR. You merge.
 
 For `repo:studio`, prefer allowlist/docs/CLI tweaks over editing `.github/workflows` until watch is solid.
 
@@ -43,9 +46,10 @@ Labels Studio uses: `working`, `pr-open`, `needs-human`, `done` (plus later QC/r
 go test ./...
 go run ./cmd/studio doctor --dry-run
 STUDIO_DRY_LABELS=repo:pad-lab go run ./cmd/studio dispatch --issue 1 --dry-run
+STUDIO_DRY_LABELS=new:go-service STUDIO_DRY_TITLE='hello notes' go run ./cmd/studio dispatch --issue 99 --dry-run
 ```
 
-Live dispatch needs `CURSOR_API_KEY` + `STUDIO_GITHUB_TOKEN`. Actions workflow: `.github/workflows/dispatch.yml`.
+Live dispatch needs `CURSOR_API_KEY` + `STUDIO_GITHUB_TOKEN` (or App-minted token in Actions). Workflow: `.github/workflows/dispatch.yml`.
 
 Cursor cloud helper: `scripts/cursor-helper/` (TypeScript wrapper around `@cursor/sdk`).
 
@@ -60,5 +64,4 @@ go run ./cmd/studio doctor --dry-run
 
 ## Status
 
-- **Phase 0** — skeleton (this commit family)
-- **Phase 1+** — see PRD §15
+See [`HANDOFF.md`](./HANDOFF.md) for progress and pickup. Spec: [`PRD.md`](./PRD.md) §15.

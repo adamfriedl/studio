@@ -5,7 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Add a label from `repos.yaml` after filing — e.g. `repo:pad-lab` or `repo:studio` (self).
+        Add a label after filing:
+        - `repo:pad-lab` / `repo:studio` / … from `repos.yaml`
+        - `new:go-service` to create a repo from the Go template
   - type: textarea
     id: summary
     attributes:
@@ -14,6 +16,14 @@ body:
       placeholder: Fix X so that Y…
     validations:
       required: true
+  - type: input
+    id: new_repo_name
+    attributes:
+      label: New repo name
+      description: Only for `new:` labels. GitHub repo name (e.g. notes-api). Leave blank to slugify the issue title.
+      placeholder: notes-api
+    validations:
+      required: false
   - type: textarea
     id: acceptance
     attributes:

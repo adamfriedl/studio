@@ -2,7 +2,9 @@ org: adamfriedl
 defaults:
   branchPrefix: studio/
   draftPR: true
-templates: {}
+templates:
+  go-service:
+    from: adamfriedl/template-go-svc
 repos:
   - name: pad-lab
   - name: studio

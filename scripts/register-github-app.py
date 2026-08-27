@@ -27,7 +27,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 CREDS_PATH = OUT_DIR / "studio-github-app.json"
 
 MANIFEST = {
-    "name": "studio-bot",
+    "name": "adamfriedl-studio",
     "url": "https://github.com/adamfriedl/studio",
     "description": "Studio: issue inbox → Cursor Cloud agents on allowlisted repos",
     "public": False,
@@ -73,8 +73,8 @@ class Handler(BaseHTTPRequestHandler):
                 result["app"] = app
                 save_and_secrets(app)
                 html = (
-                    "<h1>studio-bot registered</h1>"
-                    "<p>Credentials saved. You can close this tab and return to the terminal.</p>"
+                    "<h1>adamfriedl-studio registered</h1>"
+                    "<p>Credentials saved. Close this tab and return to the terminal.</p>"
                     f"<p>Next: install on allowlisted repos — "
                     f"<a href='{install_url(app)}'>{install_url(app)}</a></p>"
                 )
@@ -94,8 +94,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path in ("/", "/start"):
             body = f"""<!DOCTYPE html>
 <html><body>
-<h1>Register studio-bot</h1>
-<p>Click the button (you must be logged into GitHub as adamfriedl).</p>
+<h1>Register adamfriedl-studio (GitHub App)</h1>
+<p>Click the button (logged in as adamfriedl). Name must not match an existing GitHub user/org.</p>
 <form action="https://github.com/settings/apps/new" method="post">
   <input type="hidden" name="manifest" id="manifest">
   <button type="submit">Create GitHub App</button>
@@ -130,7 +130,7 @@ def exchange(code: str) -> dict:
 
 
 def install_url(app: dict) -> str:
-    slug = app.get("slug") or "studio-bot"
+    slug = app.get("slug") or "adamfriedl-studio"
     return f"https://github.com/apps/{slug}/installations/new"
 
 

@@ -51,3 +51,5 @@ When Studio creates a repo from a template:
 5. Then `Worker.Start` on the new repo as usual.
 
 Never dispatch to a repo that is not in `repos.yaml`, even if the App can see it.
+
+If `new:` picks a name that already exists and is **not** allowlisted, Studio fails closed (`needs-human`) — it will not hijack an unrelated repo. Idempotent retry is allowed only when the name is already in the catalog.

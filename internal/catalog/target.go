@@ -33,7 +33,7 @@ func (c *Catalog) TargetFromLabels(labels []string) (kind, name, repoURL string,
 		if !ok || t.From == "" {
 			return "", "", "", fmt.Errorf("unknown template %q", templateName)
 		}
-		// Phase 4 creates the repo; for now surface as not implemented at call site.
+		// Caller creates from template (t.From), allowlists, then Starts.
 		return "new", templateName, t.From, nil
 	}
 	return "", "", "", fmt.Errorf("missing repo:<name> or new:<template> label")

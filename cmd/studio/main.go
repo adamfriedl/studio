@@ -79,6 +79,12 @@ func cmdDoctor(args []string) int {
 	fmt.Printf("org: %s\n", c.Org)
 	fmt.Printf("defaults.branchPrefix: %s\n", c.Defaults.BranchPrefix)
 	fmt.Printf("defaults.draftPR: %v\n", c.Defaults.DraftPR)
+	if len(c.Templates) > 0 {
+		fmt.Println("templates:")
+		for name, t := range c.Templates {
+			fmt.Printf("  - %s ← %s\n", name, t.From)
+		}
+	}
 	fmt.Println("repos:")
 	for _, r := range c.Repos {
 		full, _ := c.FullName(r.Name)
@@ -161,14 +167,17 @@ func cmdDispatch(args []string) int {
 	var issue *gh.Issue
 	var labelNames []string
 
-	if *dryRun && token == "" {
-		// Offline dry-run: require env STUDIO_DRY_LABELS=repo:pad-lab and title/body stubs.
+	// Offline dry-run when labels are stubbed, even if a token is present in the env.
+	if *dryRun && strings.TrimSpace(os.Getenv("STUDIO_DRY_LABELS")) != "" {
 		labelNames = strings.Split(os.Getenv("STUDIO_DRY_LABELS"), ",")
 		issue = &gh.Issue{
 			Number: *issueN,
 			Title:  envOr("STUDIO_DRY_TITLE", "dry-run issue"),
 			Body:   envOr("STUDIO_DRY_BODY", "dry-run body"),
 		}
+	} else if *dryRun && token == "" {
+		fmt.Fprintln(os.Stderr, "dry-run without token requires STUDIO_DRY_LABELS")
+		return 1
 	} else {
 		client := &gh.Client{Token: token}
 		var err error
@@ -197,9 +206,36 @@ func cmdDispatch(args []string) int {
 		}
 		return 3
 	}
+
+	catalogFile := findCatalog(*catalogPath)
+	var client *gh.Client
+	if !*dryRun {
+		client = &gh.Client{Token: token}
+	}
+
 	if kind == "new" {
-		fmt.Fprintln(os.Stderr, "needs-human: new: templates not implemented until Phase 4")
-		return 3
+		templateFrom := targetURL // owner/template-repo
+		newName, err := catalog.NewRepoName(issue.Title, stripBinding(issue.Body))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "needs-human: %v\n", err)
+			if client != nil {
+				_ = client.AddComment(ctx, studioOwner, studioRepo, *issueN, "Studio: "+err.Error())
+				_ = client.AddLabels(ctx, studioOwner, studioRepo, *issueN, []string{"needs-human"})
+			}
+			return 3
+		}
+		name = newName
+		targetURL = "https://github.com/" + c.Org + "/" + name
+		fmt.Printf("new: template=%s → %s/%s\n", templateFrom, c.Org, name)
+
+		if *dryRun {
+			fmt.Printf("dry-run: would create from template, allowlist %q, ensure label repo:%s, then Start\n", name, name)
+		} else if err := provisionNewRepo(ctx, client, c, catalogFile, studioOwner, studioRepo, *issueN, templateFrom, name); err != nil {
+			fmt.Fprintf(os.Stderr, "needs-human: %v\n", err)
+			_ = client.AddComment(ctx, studioOwner, studioRepo, *issueN, "Studio: new: failed: "+err.Error())
+			_ = client.AddLabels(ctx, studioOwner, studioRepo, *issueN, []string{"needs-human"})
+			return 3
+		}
 	}
 
 	branch := fmt.Sprintf("%s%d-%s", c.Defaults.BranchPrefix, *issueN, slug(issue.Title))
@@ -227,9 +263,7 @@ func cmdDispatch(args []string) int {
 		return 1
 	}
 
-	client := &gh.Client{Token: token}
 	_ = client.AddLabels(ctx, studioOwner, studioRepo, *issueN, []string{"working"})
-
 	w := cursor.Helper{Timeout: 45 * time.Minute}
 	res, err := w.Start(ctx, worker.StartReq{
 		IssueNumber:  *issueN,
@@ -254,12 +288,12 @@ func cmdDispatch(args []string) int {
 	}
 
 	b := &binding.Binding{
-		AgentID:  res.AgentID,
-		Worker:   "cursor",
-		Repo:     strings.TrimPrefix(targetURL, "https://github.com/"),
-		Branch:   firstNonEmpty(res.Branch, branch),
-		PRURL:    res.PRURL,
-		PRStatus: "open",
+		AgentID:   res.AgentID,
+		Worker:    "cursor",
+		Repo:      strings.TrimPrefix(targetURL, "https://github.com/"),
+		Branch:    firstNonEmpty(res.Branch, branch),
+		PRURL:     res.PRURL,
+		PRStatus:  "open",
 		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 	if res.PRURL != "" {
@@ -290,6 +324,69 @@ func cmdDispatch(args []string) int {
 	_ = client.AddComment(ctx, studioOwner, studioRepo, *issueN, comment)
 	fmt.Println(comment)
 	return 0
+}
+
+// provisionNewRepo creates from template, allowlists in repos.yaml, and ensures repo:<name> label.
+// App access is assumed via All-repositories install. Must complete before Worker.Start.
+func provisionNewRepo(ctx context.Context, client *gh.Client, c *catalog.Catalog, catalogPath, studioOwner, studioRepo string, issueN int, templateFrom, name string) error {
+	if _, blocked := c.TemplateSourceNames()[name]; blocked {
+		return fmt.Errorf("repo name %q is a template source — pick another name", name)
+	}
+
+	repo, err := client.CreateFromTemplate(ctx, templateFrom, c.Org, name, true)
+	created := err == nil
+	if err != nil {
+		if err != gh.ErrRepoExists {
+			return fmt.Errorf("create from template %s: %w", templateFrom, err)
+		}
+		// Idempotent retry only: name already allowlisted (prior successful new: or manual).
+		if !c.HasRepo(name) {
+			return fmt.Errorf("repo %s/%s already exists and is not allowlisted — pick another name or use repo:%s", c.Org, name, name)
+		}
+		fmt.Printf("new: reusing allowlisted %s\n", repo.FullName)
+	} else {
+		fmt.Printf("new: created %s\n", repo.FullName)
+	}
+
+	if err := client.EnsureLabel(ctx, studioOwner, studioRepo, "repo:"+name, "0E8A16", "Target: "+name); err != nil {
+		return fmt.Errorf("ensure label repo:%s: %w", name, err)
+	}
+
+	if !c.HasRepo(name) {
+		file, err := client.GetFile(ctx, studioOwner, studioRepo, "repos.yaml")
+		if err != nil {
+			return fmt.Errorf("read repos.yaml: %w", err)
+		}
+		updated, err := catalog.AppendRepoYAML(file.Content, name)
+		if err != nil {
+			return err
+		}
+		if string(updated) != string(file.Content) {
+			msg := fmt.Sprintf("chore(catalog): allowlist %s (studio#%d)", name, issueN)
+			if err := client.PutFile(ctx, studioOwner, studioRepo, "repos.yaml", msg, updated, file.SHA); err != nil {
+				return fmt.Errorf("commit repos.yaml: %w", err)
+			}
+			fmt.Printf("new: committed allowlist %s\n", name)
+		}
+		c.AppendRepo(name)
+		_ = writeLocalCatalog(catalogPath, updated)
+	}
+
+	if created {
+		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN,
+			fmt.Sprintf("Studio: created `%s` from template `%s` and allowlisted it.", repo.FullName, templateFrom))
+	} else {
+		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN,
+			fmt.Sprintf("Studio: reusing allowlisted `%s` (already existed).", repo.FullName))
+	}
+	return nil
+}
+
+func writeLocalCatalog(path string, content []byte) error {
+	if path == "" {
+		return nil
+	}
+	return os.WriteFile(path, content, 0o644)
 }
 
 func envOr(k, def string) string {

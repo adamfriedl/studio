@@ -134,7 +134,7 @@ repos:
 
 Unknown name is the same as 4.
 
-For `new:`: create via `gh repo create` from the template; name from frontmatter or the issue title slug. Do not silently rewrite `repos.yaml` unless a later phase adds a catalog PR.
+For `new:`: create via GitHub template API; name from frontmatter `name:`/`repo:` or the issue title slug. Phase 4 **must** append the short name to `repos.yaml` (Contents API commit on studio) and ensure label `repo:<name>` exists **before** `Worker.Start`. App access is automatic when the install is All repositories.
 
 ## 7. Issue binding
 
@@ -435,7 +435,7 @@ Likely HTTP base: `https://api.cursor.com` (Bearer). Expect at least create/list
 - Allowlist only.
 - Least-privilege token **within** the personal-repos threat model: this repo's issues + listed targets. Document every target the PAT can touch in README.
 - No tokens in prompts, comments, or worker env.
-- Studio workflow: no `contents: write` on this repo unless a later phase opens catalog PRs.
+- Studio workflow `GITHUB_TOKEN` may stay `contents: read`; catalog commits use the App installation token (`STUDIO_GITHUB_TOKEN` env) which has Contents write.
 - Org / multi-user / shared runners: out of scope until a GitHub App design replaces the PAT. Do not stretch v1 security language to cover that.
 
 ## 15. Build order
