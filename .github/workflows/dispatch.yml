@@ -1,8 +1,10 @@
 name: dispatch
 
 on:
+  # Only "labeled" — not "opened". Open then add repo:/new: → one run.
+  # Adding working/pr-open also fires labeled, but the job if skips those.
   issues:
-    types: [opened, labeled]
+    types: [labeled]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -21,9 +23,14 @@ permissions:
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+    # Skip noise labels (working, pr-open, needs-human, …) at the job gate —
+    # no checkout / npm / agent. Manual workflow_dispatch always runs.
     if: >
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' && github.event.issue.state == 'open')
+      (github.event_name == 'issues' &&
+       github.event.issue.state == 'open' &&
+       (startsWith(github.event.label.name, 'repo:') ||
+        startsWith(github.event.label.name, 'new:')))
     steps:
       - uses: actions/checkout@v4
 
@@ -50,24 +57,7 @@ jobs:
             echo "n=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Skip without repo/new label
-        id: gate
-        env:
-          GH_TOKEN: ${{ secrets.STUDIO_GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          N="${{ steps.issue.outputs.n }}"
-          LABELS=$(gh api "repos/${{ github.repository }}/issues/${N}" --jq '[.labels[].name] | join(",")')
-          echo "labels=$LABELS"
-          if echo "$LABELS" | grep -Eq '(^|,)repo:|(^|,)new:'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "No repo:/new: label — skipping"
-          fi
-
       - name: studio dispatch
-        if: steps.gate.outputs.run == 'true'
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           STUDIO_GITHUB_TOKEN: ${{ secrets.STUDIO_GITHUB_TOKEN }}

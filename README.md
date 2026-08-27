@@ -29,7 +29,7 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 ## How to file work
 
 1. Open an issue on **this** repo.
-2. Add a `repo:<name>` label from `repos.yaml` (e.g. `repo:pad-lab`, `repo:studio`, `repo:job-search`, …).
+2. Add a `repo:<name>` label from `repos.yaml` (e.g. `repo:pad-lab`, `repo:studio`, `repo:job-search`, …). That label is what starts dispatch — opening alone does not.
 3. Write a small, testable scope in the body.
 4. Studio starts a cloud agent on the target; agent opens a **draft** PR. You merge.
 

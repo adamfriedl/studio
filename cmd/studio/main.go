@@ -177,6 +177,11 @@ func cmdDispatch(args []string) int {
 		for _, l := range issue.Labels {
 			labelNames = append(labelNames, l.Name)
 		}
+		// Idempotent: already started → do not launch a second cloud agent.
+		if existing, err := binding.Parse(issue.Body); err == nil && existing.AgentID != "" {
+			fmt.Printf("dispatch: already bound agent_id=%s pr=%s — skipping\n", existing.AgentID, existing.PRURL)
+			return 0
+		}
 	}
 
 	kind, name, targetURL, err := c.TargetFromLabels(labelNames)
