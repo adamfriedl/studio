@@ -19,15 +19,17 @@ Short pickup note. Spec lives in [`PRD.md`](./PRD.md). App ops: [`docs/github-ap
 ## Operator TODO (optional)
 
 - Apply [`docs/target-hook.md`](./docs/target-hook.md) on a pilot target (homelab) so watch is event-driven; poll stays backstop.
-- Live exit for Phase 4: one real `new:go-service` issue → new repo + catalog commit + draft PR (Cursor must see the new repo — All repositories on Cursor GitHub integration helps).
-- Confirm Cursor GitHub integration can access newly generated private repos (same All-repos preference as the App).
+- Grant App **Administration: write** so `new:` generate can drop the PAT fallback (`STUDIO_GITHUB_PAT`).
 
 ## Pick up here
 
 1. **Watch hardening** (PRD §15 Phase 2 leftover): replace agent on resume failure; keep binding single-writer discipline.
-2. **Live Phase 4 smoke** if not done yet (see operator TODO).
-3. **Do not start Phase 5/6** until ~two weeks of real Phase 3 use (PRD §16).
+2. **Do not start Phase 5/6** until ~two weeks of real Phase 3 use (PRD §16).
 
+## Live Phase 4 smoke (done 2026-08-27)
+
+- Issue [#2](https://github.com/adamfriedl/studio/issues/2) `new:go-service` → `adamfriedl/new-repo-smoke-test` + catalog commit + [PR #1](https://github.com/adamfriedl/new-repo-smoke-test/pull/1).
+- First Cursor Start failed (race); re-dispatch succeeded with Cursor GitHub = All repositories.
 ## Quick verify
 
 ```bash
