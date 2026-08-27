@@ -13,6 +13,7 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 | Catalog name | GitHub repo |
 | --- | --- |
 | `pad-lab` | [adamfriedl/pad-lab](https://github.com/adamfriedl/pad-lab) |
+| `studio` | [adamfriedl/studio](https://github.com/adamfriedl/studio) (self — harness/allowlist PRs; review workflows carefully) |
 
 ## Required secrets (Actions)
 
@@ -24,9 +25,11 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 ## How to file work
 
 1. Open an issue on **this** repo.
-2. Add label `repo:pad-lab` (or YAML frontmatter `repo: pad-lab`).
+2. Add label `repo:pad-lab` or `repo:studio` (self) — names from `repos.yaml`.
 3. Write a small, testable scope in the body.
 4. Studio starts a cloud agent on the target; agent opens a **draft** PR. You merge.
+
+For `repo:studio`, prefer allowlist/docs/CLI tweaks over editing `.github/workflows` until watch is solid.
 
 Labels Studio uses: `working`, `pr-open`, `needs-human`, `done` (plus later QC/review labels — see PRD).
 

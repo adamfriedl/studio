@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Add a label `repo:pad-lab` (or another name from `repos.yaml`) after filing.
+        Add a label from `repos.yaml` after filing — e.g. `repo:pad-lab` or `repo:studio` (self).
   - type: textarea
     id: summary
     attributes:
