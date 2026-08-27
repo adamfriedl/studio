@@ -34,7 +34,7 @@ jobs:
           app-id: ${{ secrets.STUDIO_APP_ID }}
           private-key: ${{ secrets.STUDIO_APP_PRIVATE_KEY }}
           owner: adamfriedl
-          repositories: studio,pad-lab,job-search,homelab,adamfriedl.github.io,intake-desk
+          # Omit repositories — see docs/github-app.md (All repositories install).
 
       - uses: actions/setup-go@v5
         with:

@@ -42,7 +42,9 @@ jobs:
           app-id: ${{ secrets.STUDIO_APP_ID }}
           private-key: ${{ secrets.STUDIO_APP_PRIVATE_KEY }}
           owner: adamfriedl
-          repositories: studio,pad-lab,job-search,homelab,adamfriedl.github.io,intake-desk
+          # Omit repositories: token covers whatever the install can see.
+          # Prefer App install = All repositories so Phase 4 new repos work
+          # without editing this workflow (catalog still gates dispatch).
 
       - uses: actions/setup-go@v5
         with:

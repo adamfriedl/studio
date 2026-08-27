@@ -477,7 +477,15 @@ Check Runs + Actions logs. No logs → `needs-human`. Resume; on failure, replac
 
 Create from template and dispatch in one run.
 
-**Exit:** one `new:go-service` issue produces a new repo and a PR.
+**Must also:**
+
+1. Ensure the GitHub App can access the new repo (prefer account install = **All repositories** so this is automatic; otherwise add the repo to the App installation).
+2. Whitelist it: append to `repos.yaml` and create label `repo:<name>` on the studio inbox.
+3. Only then `Worker.Start`.
+
+App access without a catalog entry is not enough — `repos.yaml` remains the allowlist.
+
+**Exit:** one `new:go-service` issue produces a new repo, catalog+label updated, and a PR.
 
 ### Phase 5 — Intake QC (optional)
 
@@ -552,10 +560,11 @@ If PRs are rare, fix prompts and catalog — do not add more agents. Intake QC (
 10. Binding HTML comment: single writer (`cmd/studio`); parse/corrupt → `needs-human`, no best-effort merge.
 11. Watch: poll is a backstop; after first red→green, target `repository_dispatch` hook is the preferred CI/merge path.
 12. Structured agent output: small parser + one retry + `needs-human`; never invent verdicts.
-13. Threat model v1 = personal allowlisted repos + PAT blast radius documented; org App is a later redesign.
+13. Threat model v1 = personal allowlisted repos + PAT/App blast radius documented; org App is a later redesign.
+14. GitHub App install prefers **All repositories** on the personal account so Phase 4 `new:` repos get App access automatically; `repos.yaml` remains the only dispatch allowlist. Phase 4 must update the catalog (and label) before Start.
 
 ## 19. Decisions made during implementation
 
 - **2026-08-27:** Intake QC is in scope as Phase 5 (optional). Separate specialist agent; human accepts suggested issue edits; `skip-qc` / `spec-ok` escape hatches. Not a planner–coder chain in one run of one agent.
 - **2026-08-27:** PR reviewer is in scope as Phase 6 (optional). Separate specialist agent; GitHub review on the target PR; SHA + max-2-rounds loop brake; `skip-review` escape hatch. Does not merge. Implementer still owns code follow-ups.
-- **2026-08-27:** Revised after design review: binding single-writer + corrupt→stop; watch latency via target hook after first red→green; Cursor API called out as Phase 1 critical path; PAT personal-repos threat model explicit; structured I/O parse/retry/`needs-human`.
+- **2026-08-27:** GitHub App `adamfriedl-studio`; prefer All-repositories install so Phase 4 new repos inherit App access; catalog whitelist still required before dispatch.
