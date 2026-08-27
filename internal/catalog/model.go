@@ -90,6 +90,7 @@ func ModelOverride(labels []string, body string) string {
 	return modelOverride(labels, body)
 }
 
+func modelOverride(labels []string, body string) string {
 	for _, l := range labels {
 		l = strings.TrimSpace(l)
 		if strings.HasPrefix(l, "model:") {
