@@ -20,15 +20,13 @@ Studio watch must be event-driven:
 
 **`new:` targets:** Studio upserts `.github/workflows/ci.yml` + `studio-hook.yml` and copies **`STUDIO_HOOK_TOKEN` only** after create — no manual step. Pack source of truth: `internal/provision/assets/`. The App private key stays on `adamfriedl/studio`.
 
-**Existing** targets: install the hook + secrets by hand (table above). Prefer `STUDIO_HOOK_TOKEN` (same narrow PAT) over App secrets on those repos when you next touch them.
+**Existing** targets: migrated to `STUDIO_HOOK_TOKEN` + `github.token` local reads (App private key removed from targets; stays on studio for dispatch/watch). Re-run [`scripts/migrate-target-hooks.py`](../scripts/migrate-target-hooks.py) if you add a repo.
 
-### `STUDIO_HOOK_TOKEN` (required for `new:`)
+### `STUDIO_HOOK_TOKEN` (required)
 
-Fine-grained PAT (or classic with minimal scope) that can create `repository_dispatch` on **`adamfriedl/studio` only**. Store as Actions secret `STUDIO_HOOK_TOKEN` on studio; Phase 4 copies it onto each new target.
+Fine-grained PAT that can create `repository_dispatch` on **`adamfriedl/studio` only**. Stored as Actions secret on studio and every allowlisted target. Phase 4 copies it onto each `new:` repo.
 
-Each manually installed target needs `STUDIO_HOOK_TOKEN` (preferred) or legacy `STUDIO_APP_ID` + `STUDIO_APP_PRIVATE_KEY`.
-
-Canonical copy to adapt: [`.github/workflows/studio-hook.yml`](../.github/workflows/studio-hook.yml) on studio (PR-events-only variant). pad-lab / homelab / intake-desk add a `workflow_run` block with their CI `name:` values — never include `studio-hook` itself. The `new:` pack hook already listens for `workflows: ["ci"]`.
+Canonical copy: [`.github/workflows/studio-hook.yml`](../.github/workflows/studio-hook.yml) (PR-events-only). pad-lab / homelab / intake-desk add `workflow_run` with their CI `name:` — never include `studio-hook` itself. The `new:` pack defaults to `workflows: ["ci"]`.
 
 ## Dispatch types (studio `watch.yml`)
 

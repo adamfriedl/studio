@@ -19,7 +19,7 @@ Solo operator. Personal Cursor account. Fine-grained or classic PAT stored only 
 | `adamfriedl.github.io` | [adamfriedl/adamfriedl.github.io](https://github.com/adamfriedl/adamfriedl.github.io) |
 | `intake-desk` | [adamfriedl/intake-desk](https://github.com/adamfriedl/intake-desk) |
 
-**App blast radius:** `STUDIO_APP_ID` / `STUDIO_APP_PRIVATE_KEY` stay on **studio** only (dispatch/watch minting). Phase 4 `new:` copies a narrow `STUDIO_HOOK_TOKEN` onto each new target for `studio-hook` — not the App private key. Existing allowlisted repos may still hold App secrets from the earlier manual install; prefer migrating those to `STUDIO_HOOK_TOKEN` when convenient.
+**App blast radius:** `STUDIO_APP_ID` / `STUDIO_APP_PRIVATE_KEY` stay on **studio** only (dispatch/watch minting). Targets use `STUDIO_HOOK_TOKEN` for `studio-hook` (Phase 4 copies it onto `new:` repos; existing allowlisted targets migrated).
 
 ## Required secrets (Actions)
 
