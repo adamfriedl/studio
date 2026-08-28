@@ -19,7 +19,7 @@ Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./doc
 
 **Live smoke (2026-08-28):** studio#3/#4/#5 → pad-lab#2/#3/#4 (happy path, QC needs-work→spec-ok, Phase 6 changes-requested→FollowUp). Smoke debris removed from pad-lab README.
 
-**Live smoke `new:` (2026-08-28):** studio#6 → pad-go-smoke — create + pack CI/hook + `STUDIO_HOOK_TOKEN` + draft PR + Phase 6 lgtm; repo deleted after smoke. Hook fix: local reads use `github.token`. Targets migrated to `STUDIO_HOOK_TOKEN` (App secrets removed except on studio).
+**Live smoke `new:` (2026-08-28):** studio#6 → pad-go-smoke — create + pack CI/hook + `STUDIO_HOOK_TOKEN` + draft PR + Phase 6 lgtm; repo deleted after smoke. Hook fix: local reads use `github.token`. Targets migrated to `STUDIO_HOOK_TOKEN` (App secrets removed except on studio). Phase 6.1 glance (studio#7 → pad-lab#5): `### PR Reviewer Guide` on grok-4.6; PR discarded.
 
 ## Pick up here
 
