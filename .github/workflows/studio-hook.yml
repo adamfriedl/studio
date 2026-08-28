@@ -1,11 +1,13 @@
 name: studio-hook
 
-# Event-driven kick into adamfriedl/studio watch (cron is backstop only).
+# Event-driven kick into adamfriedl/studio watch (cron is a backstop only).
 # Docs: https://github.com/adamfriedl/studio/blob/main/docs/target-hook.md
 #
-# Secrets (either App pair or PAT fallback):
-#   STUDIO_APP_ID + STUDIO_APP_PRIVATE_KEY  (preferred)
-#   STUDIO_HOOK_TOKEN                       (PAT that can repository_dispatch studio)
+# Secret (required on new: targets — Studio copies this at provision time):
+#   STUDIO_HOOK_TOKEN  — fine-grained PAT that can repository_dispatch on adamfriedl/studio
+#                        (do NOT put the Studio App private key on target repos)
+#
+# Local repo reads use github.token; STUDIO_HOOK_TOKEN is only for dispatch to studio.
 
 on:
   pull_request_review:
@@ -28,19 +30,10 @@ jobs:
   notify-studio:
     runs-on: ubuntu-latest
     steps:
-      - name: Mint token for studio dispatch
-        id: app
-        continue-on-error: true
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.STUDIO_APP_ID }}
-          private-key: ${{ secrets.STUDIO_APP_PRIVATE_KEY }}
-          owner: adamfriedl
-          repositories: studio
-
       - name: Resolve studio issue + dispatch
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token || secrets.STUDIO_HOOK_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          STUDIO_HOOK_TOKEN: ${{ secrets.STUDIO_HOOK_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           ACTION: ${{ github.event.action }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -50,8 +43,8 @@ jobs:
           WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         run: |
           set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "No STUDIO_APP_* token or STUDIO_HOOK_TOKEN — skip"
+          if [ -z "${STUDIO_HOOK_TOKEN:-}" ]; then
+            echo "No STUDIO_HOOK_TOKEN — skip"
             exit 0
           fi
 
@@ -63,9 +56,9 @@ jobs:
           if [ "$EVENT_NAME" = "workflow_run" ]; then
             reason="checks-${WR_CONCLUSION:-done}"
             pr_json=$(gh api "repos/${{ github.repository }}/commits/${sha}/pulls" \
-              -H "Accept: application/vnd.github.groot-preview+json" || true)
-            body=$(echo "$pr_json" | jq -r '.[0].body // empty')
-            pr_url=$(echo "$pr_json" | jq -r '.[0].html_url // empty')
+              -H "Accept: application/vnd.github.groot-preview+json" || echo '[]')
+            body=$(echo "$pr_json" | jq -r 'if type=="array" then (.[0].body // empty) else empty end')
+            pr_url=$(echo "$pr_json" | jq -r 'if type=="array" then (.[0].html_url // empty) else empty end')
             if [ -z "$body" ]; then
               echo "No PR for sha $sha — skip"
               exit 0
@@ -99,7 +92,7 @@ jobs:
           esac
 
           echo "Dispatch $event_type issue=$issue reason=$reason"
-          gh api -X POST repos/adamfriedl/studio/dispatches \
+          GH_TOKEN="$STUDIO_HOOK_TOKEN" gh api -X POST repos/adamfriedl/studio/dispatches \
             -f event_type="$event_type" \
             -f "client_payload[issue_number]=$issue" \
             -f "client_payload[reason]=$reason" \
