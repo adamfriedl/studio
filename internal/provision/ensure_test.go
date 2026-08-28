@@ -103,6 +103,9 @@ func TestEnsureUpserts(t *testing.T) {
 	if !bytes.Contains(hook, []byte("STUDIO_HOOK_TOKEN")) {
 		t.Fatal("hook should use STUDIO_HOOK_TOKEN")
 	}
+	if !bytes.Contains(hook, []byte("github.token")) {
+		t.Fatal("hook should use github.token for local reads")
+	}
 	if bytes.Contains(hook, []byte("STUDIO_APP_PRIVATE_KEY")) {
 		t.Fatal("pack hook must not reference App private key")
 	}

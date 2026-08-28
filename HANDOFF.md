@@ -19,10 +19,13 @@ Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./doc
 
 **Live smoke (2026-08-28):** studio#3/#4/#5 → pad-lab#2/#3/#4 (happy path, QC needs-work→spec-ok, Phase 6 changes-requested→FollowUp). Smoke debris removed from pad-lab README.
 
+**Live smoke `new:` (2026-08-28):** studio#6 → [pad-go-smoke](https://github.com/adamfriedl/pad-go-smoke) — create + pack CI/hook + `STUDIO_HOOK_TOKEN` + draft PR#1 + Phase 6 lgtm. Hook `workflow_run` on main failed until local reads used `github.token` (FG PAT is studio-only).
+
 ## Pick up here
 
-1. Live smoke: `new:go-service` after provision+HOOK_TOKEN lands on main (create → pack CI/hook → secret → PR).
+1. Merge pad-go-smoke#1 (or leave as debris) and close studio#6 when ready.
 2. Optional: Phase 6 Reviewer Guide header glance on `grok-4.6`.
+3. Optional: migrate existing targets from App secrets → `STUDIO_HOOK_TOKEN`.
 
 ## Quick verify
 
