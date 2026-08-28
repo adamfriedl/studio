@@ -134,7 +134,7 @@ repos:
 
 Unknown name is the same as 4.
 
-For `new:`: create via GitHub template API; name from frontmatter `name:`/`repo:` or the issue title slug. Phase 4 **must** append the short name to `repos.yaml` (Contents API commit on studio) and ensure label `repo:<name>` exists **before** `Worker.Start`. App access is automatic when the install is All repositories.
+For `new:`: create via GitHub template API; name from frontmatter `name:`/`repo:` or the issue title slug. Phase 4 **must** append the short name to `repos.yaml` (Contents API commit on studio), ensure label `repo:<name>` exists, and provision pack CI + `studio-hook` + `STUDIO_HOOK_TOKEN` **before** `Worker.Start`. App access is automatic when the install is All repositories. Do **not** copy the Studio App private key onto targets.
 
 ## 7. Issue binding
 
@@ -361,7 +361,7 @@ On:
 
 ### Target hook — `docs/target-hook.md`
 
-Optional snippet for allowlisted targets (copy into the target’s workflows; Studio does **not** auto-edit target CI):
+Optional snippet for **existing** allowlisted targets (copy into the target’s workflows). On `new:`, Studio **does** upsert pack CI + `studio-hook.yml` and copy `STUDIO_HOOK_TOKEN` (see Phase 4). Manual install remains for repos that were allowlisted before auto-provision:
 
 - On `workflow_run` completed + failure (or `check_suite` failure), if the head commit’s PR body contains `Studio: <host>#N`, `repository_dispatch` the studio repo with type `studio-ci-failed` and that issue number.
 - On `pull_request` closed + merged with the same footer, dispatch `studio-pr-merged`.
@@ -484,11 +484,12 @@ Create from template and dispatch in one run.
 
 1. Ensure the GitHub App can access the new repo (prefer account install = **All repositories** so this is automatic; otherwise add the repo to the App installation).
 2. Whitelist it: append to `repos.yaml` and create label `repo:<name>` on the studio inbox.
-3. Only then `Worker.Start`.
+3. Provision pack: upsert stack CI + `studio-hook.yml` from `internal/provision`, copy `STUDIO_HOOK_TOKEN` onto the new repo (fail closed if missing). Never copy `STUDIO_APP_PRIVATE_KEY` onto targets.
+4. Only then `Worker.Start`.
 
 App access without a catalog entry is not enough — `repos.yaml` remains the allowlist.
 
-**Exit:** one `new:go-service` issue produces a new repo, catalog+label updated, and a PR.
+**Exit:** one `new:go-service` issue produces a new repo, catalog+label updated, CI/hook/`STUDIO_HOOK_TOKEN` provisioned, and a PR.
 
 ### Phase 5 — Intake QC (optional)
 
@@ -568,7 +569,7 @@ If PRs are rare, fix prompts and catalog — do not add more agents. Intake QC (
 11. Watch: poll is a backstop; after first red→green, target `repository_dispatch` hook is the preferred CI/merge path.
 12. Structured agent output: small parser + one retry + `needs-human`; never invent verdicts.
 13. Threat model v1 = personal allowlisted repos + PAT/App blast radius documented; org App is a later redesign.
-14. GitHub App install prefers **All repositories** on the personal account so Phase 4 `new:` repos get App access automatically; `repos.yaml` remains the only dispatch allowlist. Phase 4 must update the catalog (and label) before Start.
+14. GitHub App install prefers **All repositories** on the personal account so Phase 4 `new:` repos get App access automatically; `repos.yaml` remains the only dispatch allowlist. Phase 4 must update the catalog (and label) and provision CI/hook/`STUDIO_HOOK_TOKEN` before Start (App private key stays on studio).
 
 ## 19. Decisions made during implementation
 

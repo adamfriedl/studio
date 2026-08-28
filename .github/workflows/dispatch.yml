@@ -75,8 +75,10 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           STUDIO_GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.STUDIO_GITHUB_TOKEN }}
-          # Classic PAT — used only for new: template generate if the App lacks administration.
+          # Classic PAT — new: template generate / secret copy if the App lacks administration or secrets:write.
           STUDIO_GITHUB_PAT: ${{ secrets.STUDIO_GITHUB_TOKEN }}
+          # Narrow token copied onto new: targets for studio-hook (not the App private key).
+          STUDIO_HOOK_TOKEN: ${{ secrets.STUDIO_HOOK_TOKEN }}
           STUDIO_CURSOR_MODEL: grok-4.6
           STUDIO_QC_MODEL: grok-4.6
           STUDIO_REVIEW_MODEL: grok-4.6

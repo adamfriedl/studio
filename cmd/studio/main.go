@@ -14,6 +14,7 @@ import (
 	"github.com/adamfriedl/studio/internal/catalog"
 	gh "github.com/adamfriedl/studio/internal/github"
 	"github.com/adamfriedl/studio/internal/prompt"
+	"github.com/adamfriedl/studio/internal/provision"
 	"github.com/adamfriedl/studio/internal/worker"
 	"github.com/adamfriedl/studio/internal/worker/cursor"
 )
@@ -214,6 +215,7 @@ func cmdDispatch(args []string) int {
 	}
 
 	if kind == "new" {
+		templateKey := name // TargetFromLabels returns template key as name
 		templateFrom := targetURL // owner/template-repo
 		newName, err := catalog.NewRepoName(issue.Title, stripBinding(issue.Body))
 		if err != nil {
@@ -226,11 +228,11 @@ func cmdDispatch(args []string) int {
 		}
 		name = newName
 		targetURL = "https://github.com/" + c.Org + "/" + name
-		fmt.Printf("new: template=%s → %s/%s\n", templateFrom, c.Org, name)
+		fmt.Printf("new: template=%s (%s) → %s/%s\n", templateKey, templateFrom, c.Org, name)
 
 		if *dryRun {
-			fmt.Printf("dry-run: would create from template, allowlist %q, ensure label repo:%s, then Start\n", name, name)
-		} else if err := provisionNewRepo(ctx, client, c, catalogFile, studioOwner, studioRepo, *issueN, templateFrom, name); err != nil {
+			fmt.Printf("dry-run: would create from template, allowlist %q, provision CI/hook/HOOK_TOKEN, ensure label repo:%s, then Start\n", name, name)
+		} else if err := provisionNewRepo(ctx, client, c, catalogFile, studioOwner, studioRepo, *issueN, templateKey, templateFrom, name); err != nil {
 			fmt.Fprintf(os.Stderr, "needs-human: %v\n", err)
 			_ = client.AddComment(ctx, studioOwner, studioRepo, *issueN, "Studio: new: failed: "+err.Error())
 			_ = client.AddLabels(ctx, studioOwner, studioRepo, *issueN, []string{"needs-human"})
@@ -394,9 +396,9 @@ func cmdDispatch(args []string) int {
 	return 0
 }
 
-// provisionNewRepo creates from template, allowlists in repos.yaml, and ensures repo:<name> label.
-// App access is assumed via All-repositories install. Must complete before Worker.Start.
-func provisionNewRepo(ctx context.Context, client *gh.Client, c *catalog.Catalog, catalogPath, studioOwner, studioRepo string, issueN int, templateFrom, name string) error {
+// provisionNewRepo creates from template, allowlists in repos.yaml, ensures repo:<name> label,
+// then upserts CI + studio-hook and copies App secrets. Must complete before Worker.Start.
+func provisionNewRepo(ctx context.Context, client *gh.Client, c *catalog.Catalog, catalogPath, studioOwner, studioRepo string, issueN int, templateKey, templateFrom, name string) error {
 	if _, blocked := c.TemplateSourceNames()[name]; blocked {
 		return fmt.Errorf("repo name %q is a template source — pick another name", name)
 	}
@@ -448,17 +450,27 @@ func provisionNewRepo(ctx context.Context, client *gh.Client, c *catalog.Catalog
 		_ = client.AddComment(ctx, studioOwner, studioRepo, issueN,
 			fmt.Sprintf("Studio: reusing allowlisted `%s` (already existed).", repo.FullName))
 	}
+
+	// Prefer PAT for secrets/contents if App lacks secrets:write (same as generate).
+	provClient := clientForRepoCreate(client)
+	res, err := provision.Ensure(ctx, provClient, c.Org, name, templateKey)
+	if err != nil {
+		return fmt.Errorf("provision target: %w", err)
+	}
+	fmt.Printf("new: provisioned files=%v secrets=%v\n", res.Files, res.Secrets)
+	_ = client.AddComment(ctx, studioOwner, studioRepo, issueN,
+		fmt.Sprintf("Studio: provisioned `%s` — workflows %v; secrets %v.", repo.FullName, res.Files, res.Secrets))
 	return nil
 }
 
-// clientForRepoCreate prefers STUDIO_GITHUB_PAT for template generate (App tokens often
-// lack administration:write until the permission is granted on the install).
+// clientForRepoCreate prefers STUDIO_GITHUB_PAT for template generate / secret put when the
+// App token lacks administration or secrets:write.
 func clientForRepoCreate(primary *gh.Client) *gh.Client {
 	pat := strings.TrimSpace(os.Getenv("STUDIO_GITHUB_PAT"))
 	if pat == "" || primary == nil || pat == primary.Token {
 		return primary
 	}
-	fmt.Println("new: using STUDIO_GITHUB_PAT for template generate")
+	fmt.Println("new: using STUDIO_GITHUB_PAT for template generate / provision")
 	return &gh.Client{Token: pat, BaseURL: primary.BaseURL, HTTPClient: primary.HTTPClient, UserAgent: primary.UserAgent}
 }
 

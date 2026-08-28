@@ -16,10 +16,19 @@ Studio watch must be event-driven:
 | `adamfriedl.github.io` | _(none)_ |
 | `homelab` | `Plan and apply` |
 | `intake-desk` | `verify` |
+| **`new:` (Phase 4)** | Auto: `ci` (from provision pack; e.g. `go-service`) |
 
-Each target needs secrets `STUDIO_APP_ID` + `STUDIO_APP_PRIVATE_KEY` (or `STUDIO_HOOK_TOKEN`).
+**`new:` targets:** Studio upserts `.github/workflows/ci.yml` + `studio-hook.yml` and copies **`STUDIO_HOOK_TOKEN` only** after create — no manual step. Pack source of truth: `internal/provision/assets/`. The App private key stays on `adamfriedl/studio`.
 
-Canonical copy to adapt: [`.github/workflows/studio-hook.yml`](../.github/workflows/studio-hook.yml) on studio (PR-events-only variant). pad-lab / homelab / intake-desk add a `workflow_run` block with their CI `name:` values — never include `studio-hook` itself.
+**Existing** targets: install the hook + secrets by hand (table above). Prefer `STUDIO_HOOK_TOKEN` (same narrow PAT) over App secrets on those repos when you next touch them.
+
+### `STUDIO_HOOK_TOKEN` (required for `new:`)
+
+Fine-grained PAT (or classic with minimal scope) that can create `repository_dispatch` on **`adamfriedl/studio` only**. Store as Actions secret `STUDIO_HOOK_TOKEN` on studio; Phase 4 copies it onto each new target.
+
+Each manually installed target needs `STUDIO_HOOK_TOKEN` (preferred) or legacy `STUDIO_APP_ID` + `STUDIO_APP_PRIVATE_KEY`.
+
+Canonical copy to adapt: [`.github/workflows/studio-hook.yml`](../.github/workflows/studio-hook.yml) on studio (PR-events-only variant). pad-lab / homelab / intake-desk add a `workflow_run` block with their CI `name:` values — never include `studio-hook` itself. The `new:` pack hook already listens for `workflows: ["ci"]`.
 
 ## Dispatch types (studio `watch.yml`)
 

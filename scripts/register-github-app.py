@@ -48,6 +48,7 @@ MANIFEST = {
         "pull_requests": "write",
         "checks": "read",
         "actions": "read",
+        "secrets": "write",  # copy STUDIO_HOOK_TOKEN onto new: targets
     },
     "default_events": [],
 }

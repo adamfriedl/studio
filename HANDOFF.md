@@ -12,6 +12,7 @@ Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./doc
 | **6.1** | Reviewer Guide body: effort / tests / security / focus + summary; soft-parse optional fields |
 | **Models** | Default `grok-4.6` for implement / QC / review; allowlist also `grok-4.5`, `composer-2.5` + per-issue override |
 | **Watch kick** | Dispatch `studio-watch` after Start returns `pr_url`; target-hook on all allowlisted repos + App secrets; cron = backstop |
+| **`new:` provision** | After create: upsert pack CI + `studio-hook`, copy `STUDIO_HOOK_TOKEN` only (fail closed); App private key stays on studio |
 | **Echo fix** | Skip `cursor[bot]` review comments when building FollowUps |
 
 **Allowlist:** pad-lab, studio, job-search, homelab, adamfriedl.github.io, intake-desk.
@@ -20,7 +21,8 @@ Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./doc
 
 ## Pick up here
 
-1. Optional: live glance that a new Phase 6 review posts the Reviewer Guide header (now on `grok-4.6` by default).
+1. Live smoke: `new:go-service` after provision+HOOK_TOKEN lands on main (create → pack CI/hook → secret → PR).
+2. Optional: Phase 6 Reviewer Guide header glance on `grok-4.6`.
 
 ## Quick verify
 
