@@ -15,9 +15,10 @@ Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./doc
 
 ## Pick up here
 
-1. Live smoke: one intake `needs-work` → edit → `spec-ok`; one full ok→PR; one reviewer `changes-requested` → implementer.
-2. Optional: target-hook on a pilot repo (event-driven watch).
+1. Live smoke: one intake `needs-work` → edit → `spec-ok`; one reviewer `changes-requested` → implementer FollowUp (pad-lab#2 / studio#3 was happy-path LGTM).
+2. Ship target-hook: pad-lab workflow + App secrets on target; confirm review-comment → `studio-watch` without cron.
 3. Optional: raise default models in workflows once a stronger cloud id is confirmed.
+4. Cron on `watch.yml` stays as backstop only — see [`docs/target-hook.md`](./docs/target-hook.md).
 
 ## Quick verify
 

@@ -10,7 +10,9 @@ on:
         required: false
         type: string
   repository_dispatch:
-    types: [studio-ci-failed, studio-pr-merged]
+    # studio-watch = generic kick (CI done, review comments, sync, first PR, …)
+    # Keep legacy types so older target hooks still work.
+    types: [studio-watch, studio-ci-failed, studio-pr-merged, studio-checks-done, studio-review-activity]
 
 concurrency:
   # One watch at a time — schedule + repository_dispatch must not race the same issue.

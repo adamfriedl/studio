@@ -49,11 +49,19 @@ Per-issue: label `model:grok-4.5`, frontmatter `model:`, or the issue-form dropd
 3. Optional: **New repo name**, `model:` override, or frontmatter.
 4. Write a small, testable scope.
 5. **Intake QC runs by default.** If `needs-work`, edit the issue and label `spec-ok` or `skip-qc`. If ok, implementer Starts and opens a draft PR.
-6. Watch: CI FollowUp, automated PR review (COMMENT), human review threads → implementer. Merge → studio issue closes as `done`.
+6. Watch (event-driven): dispatch kicks watch when a PR URL appears; targets with [`docs/target-hook.md`](./docs/target-hook.md) notify on review comments / sync / merge. Cron is a backstop only.
+7. CI FollowUp, automated PR review (COMMENT), human review threads → implementer. Merge → studio issue closes as `done`.
 
 Escape labels: `skip-qc`, `spec-ok`, `skip-review`.
 
 Other labels: `working`, `pr-open`, `needs-human`, `needs-spec`, `done`.
+
+## Watch / target hook
+
+GitHub schedule cron is **unreliable** on quiet repos. Daily use requires:
+
+- Studio `repository_dispatch` kick after Start returns `pr_url`
+- Target workflow from [`docs/target-hook.md`](./docs/target-hook.md) (pilot: pad-lab `studio-hook.yml` + App secrets on the target)
 
 ## Local CLI
 

@@ -374,6 +374,17 @@ func cmdDispatch(args []string) int {
 	if res.PRURL != "" {
 		comment += fmt.Sprintf("\nPR: %s", res.PRURL)
 		_ = client.AddLabels(ctx, studioOwner, studioRepo, *issueN, []string{"pr-open"})
+		// Don't wait on Actions cron — kick watch for Phase 6 / comment FollowUp.
+		if err := client.RepositoryDispatch(ctx, studioOwner, studioRepo, "studio-watch", map[string]any{
+			"issue_number": *issueN,
+			"reason":       "dispatch-pr-open",
+			"pr_url":       res.PRURL,
+		}); err != nil {
+			fmt.Fprintf(os.Stderr, "watch kick: %v\n", err)
+			comment += "\n(watch kick failed — cron/target-hook/backstop still apply)"
+		} else {
+			comment += "\nWatch kicked (`studio-watch`)."
+		}
 	} else {
 		comment += "\nNo PR URL returned — needs-human if the run finished without a PR."
 		_ = client.AddLabels(ctx, studioOwner, studioRepo, *issueN, []string{"needs-human"})
