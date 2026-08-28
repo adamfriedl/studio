@@ -60,7 +60,7 @@ async function create(args: string[]) {
   const repo = flag(args, "--repo");
   if (!repo) throw new Error("--repo required");
   const ref = flag(args, "--ref") ?? "main";
-  const model = flag(args, "--model") ?? process.env.STUDIO_CURSOR_MODEL ?? "composer-2.5";
+  const model = flag(args, "--model") ?? process.env.STUDIO_CURSOR_MODEL ?? "grok-4.6";
   const autoPR = has(args, "--auto-pr");
   const prompt = readPrompt(flag(args, "--prompt-file") ?? "-");
 

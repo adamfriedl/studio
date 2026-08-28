@@ -33,12 +33,12 @@ Studio only allows the **Cursor Models** pool (included generous usage on paid p
 
 | ID | Notes |
 | --- | --- |
-| `composer-2.5` | Default implementer / QC / review |
+| `grok-4.6` | Default implementer / QC / review (stronger included-pool general model) |
 | `grok-4.5` | Cursor Grok |
-| `grok-4.6` | Cursor Grok |
+| `composer-2.5` | Faster/cheaper included-pool option; still allowlisted |
 
 Env: `STUDIO_CURSOR_MODEL` / `STUDIO_QC_MODEL` / `STUDIO_REVIEW_MODEL` (must be one of the above).  
-Per-issue: label `model:grok-4.5`, frontmatter `model:`, or the issue-form dropdown. Invalid IDs fall back to `composer-2.5`.
+Per-issue: label `model:composer-2.5`, frontmatter `model:`, or the issue-form dropdown. Invalid IDs fall back to `grok-4.6`.
 
 ## How to file work
 

@@ -10,7 +10,7 @@ Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./doc
 | **5** | Intake QC on by default; `needs-spec` / `spec-ok` / `skip-qc`; separate `spec_agent_id` |
 | **6** | SHA-gated PR reviewer (COMMENT only, max 2 rounds); then implementer FollowUp on threads |
 | **6.1** | Reviewer Guide body: effort / tests / security / focus + summary; soft-parse optional fields |
-| **Models** | `STUDIO_CURSOR_MODEL` / `STUDIO_QC_MODEL` / `STUDIO_REVIEW_MODEL` + per-issue `model:` / label |
+| **Models** | Default `grok-4.6` for implement / QC / review; allowlist also `grok-4.5`, `composer-2.5` + per-issue override |
 | **Watch kick** | Dispatch `studio-watch` after Start returns `pr_url`; target-hook on all allowlisted repos + App secrets; cron = backstop |
 | **Echo fix** | Skip `cursor[bot]` review comments when building FollowUps |
 
@@ -20,8 +20,7 @@ Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./doc
 
 ## Pick up here
 
-1. Optional: raise default models in workflows once a stronger cloud id is confirmed.
-2. Optional: live glance that a new Phase 6 review posts the Reviewer Guide header.
+1. Optional: live glance that a new Phase 6 review posts the Reviewer Guide header (now on `grok-4.6` by default).
 
 ## Quick verify
 

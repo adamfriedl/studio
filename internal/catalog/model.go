@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const DefaultImplementModel = "composer-2.5"
+const DefaultImplementModel = "grok-4.6"
 
 // IncludedModels are Cursor Models pool IDs (generous included usage on paid plans).
 // See https://cursor.com/docs/models-and-pricing — keep third-party models out for cost.
@@ -34,9 +34,9 @@ func NormalizeModel(id string) (string, error) {
 	switch id {
 	case "composer", "composer2.5", "composer-2":
 		id = "composer-2.5"
-	case "grok", "grok4.5", "cursor-grok-4.5":
+	case "grok4.5", "cursor-grok-4.5":
 		id = "grok-4.5"
-	case "grok4.6", "cursor-grok-4.6":
+	case "grok", "grok4.6", "cursor-grok-4.6":
 		id = "grok-4.6"
 	}
 	if _, ok := includedSet[id]; !ok {
