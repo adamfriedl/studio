@@ -107,8 +107,8 @@ func runPRReview(ctx context.Context, client *gh.Client, cat *catalog.Catalog, s
 	b.ReviewStatus = parsed.Verdict
 	b.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
-	reviewBody := fmt.Sprintf("Studio automated review (`%s`): **%s**\n\n%s\n\nStudio: https://github.com/%s/%s/issues/%d",
-		res.AgentID, parsed.Verdict, parsed.Summary, studioOwner, studioRepo, issueN)
+	reviewBody := parse.FormatPRReviewGuide(parsed, res.AgentID,
+		fmt.Sprintf("https://github.com/%s/%s/issues/%d", studioOwner, studioRepo, issueN))
 	var inline []gh.ReviewCommentIn
 	for _, c := range parsed.Comments {
 		if c.Path == "" || c.Body == "" || c.Line <= 0 {

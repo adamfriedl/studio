@@ -8,8 +8,11 @@ import (
 )
 
 var (
-	verdictRE = regexp.MustCompile(`(?mi)^verdict:\s*(\S+)\s*$`)
-	summaryRE = regexp.MustCompile(`(?mis)^summary:\s*(.+?)(?:\n(?:questions|comments|verdict):|\z)`)
+	verdictRE  = regexp.MustCompile(`(?mi)^verdict:\s*(\S+)\s*$`)
+	summaryRE  = regexp.MustCompile(`(?mis)^summary:\s*(.+?)(?:\n(?:questions|comments|focus|effort|tests|security|verdict):|\z)`)
+	effortRE   = regexp.MustCompile(`(?mi)^effort:\s*(\S+)\s*$`)
+	testsRE    = regexp.MustCompile(`(?mi)^tests:\s*(.+?)\s*$`)
+	securityRE = regexp.MustCompile(`(?mi)^security:\s*(.+?)\s*$`)
 )
 
 // IntakeResult is the Phase 5 QC structured output.
@@ -27,10 +30,20 @@ type ReviewComment struct {
 	Body string
 }
 
+// FocusArea is one human-facing Reviewer Guide focus item.
+type FocusArea struct {
+	Area string
+	Why  string
+}
+
 // PRReviewResult is the Phase 6 reviewer structured output.
 type PRReviewResult struct {
 	Verdict  string // lgtm | changes-requested
 	Summary  string
+	Effort   string // optional 1-5
+	Tests    string // optional yes | no | n/a
+	Security string // optional one-liner
+	Focus    []FocusArea
 	Comments []ReviewComment
 	Raw      string
 }
@@ -75,6 +88,16 @@ func ParsePRReview(text string) (*PRReviewResult, error) {
 	if sm := summaryRE.FindStringSubmatch(text); sm != nil {
 		out.Summary = strings.TrimSpace(sm[1])
 	}
+	if em := effortRE.FindStringSubmatch(text); em != nil {
+		out.Effort = strings.TrimSpace(em[1])
+	}
+	if tm := testsRE.FindStringSubmatch(text); tm != nil {
+		out.Tests = strings.TrimSpace(tm[1])
+	}
+	if sec := securityRE.FindStringSubmatch(text); sec != nil {
+		out.Security = strings.TrimSpace(sec[1])
+	}
+	out.Focus = parseFocusAreas(text)
 	out.Comments = parseReviewComments(text)
 	return out, nil
 }
@@ -164,13 +187,99 @@ func parseReviewComments(text string) []ReviewComment {
 	return out
 }
 
+func parseFocusAreas(text string) []FocusArea {
+	re := regexp.MustCompile(`(?mi)^focus:\s*$`)
+	loc := re.FindStringIndex(text)
+	if loc == nil {
+		return nil
+	}
+	rest := text[loc[1]:]
+	// Stop at comments: section if present after focus.
+	if ci := regexp.MustCompile(`(?mi)^comments:\s*$`).FindStringIndex(rest); ci != nil {
+		rest = rest[:ci[0]]
+	}
+	var out []FocusArea
+	var cur *FocusArea
+	flush := func() {
+		if cur != nil && cur.Area != "" {
+			out = append(out, *cur)
+		}
+		cur = nil
+	}
+	for _, line := range strings.Split(rest, "\n") {
+		trim := strings.TrimSpace(line)
+		if trim == "" {
+			continue
+		}
+		if strings.HasPrefix(trim, "-") {
+			flush()
+			cur = &FocusArea{}
+			trim = strings.TrimSpace(strings.TrimPrefix(trim, "-"))
+		}
+		if cur == nil {
+			continue
+		}
+		key, val, ok := strings.Cut(trim, ":")
+		if !ok {
+			continue
+		}
+		key = strings.ToLower(strings.TrimSpace(key))
+		val = strings.TrimSpace(val)
+		switch key {
+		case "area":
+			cur.Area = val
+		case "why":
+			cur.Why = val
+		}
+	}
+	flush()
+	return out
+}
+
+// FormatPRReviewGuide builds the GitHub review body (COMMENT) in Reviewer Guide shape.
+func FormatPRReviewGuide(r *PRReviewResult, agentID, studioIssueURL string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "### PR Reviewer Guide\n\n")
+	fmt.Fprintf(&b, "**Verdict:** %s", r.Verdict)
+	if agentID != "" {
+		fmt.Fprintf(&b, " · agent `%s`", agentID)
+	}
+	b.WriteByte('\n')
+	if r.Effort != "" {
+		fmt.Fprintf(&b, "**Estimated effort to review:** %s/5\n", r.Effort)
+	}
+	if r.Tests != "" {
+		fmt.Fprintf(&b, "**Tests:** %s\n", r.Tests)
+	}
+	if r.Security != "" {
+		fmt.Fprintf(&b, "**Security:** %s\n", r.Security)
+	}
+	if r.Summary != "" {
+		fmt.Fprintf(&b, "\n%s\n", r.Summary)
+	}
+	if len(r.Focus) > 0 {
+		fmt.Fprintf(&b, "\n#### Recommended focus areas\n\n")
+		for i, f := range r.Focus {
+			if f.Why != "" {
+				fmt.Fprintf(&b, "%d. **%s** — %s\n", i+1, f.Area, f.Why)
+			} else {
+				fmt.Fprintf(&b, "%d. **%s**\n", i+1, f.Area)
+			}
+		}
+	}
+	if studioIssueURL != "" {
+		fmt.Fprintf(&b, "\nStudio: %s\n", studioIssueURL)
+	}
+	return b.String()
+}
+
 // RetryPrompt asks the agent to reply with only the schema.
 func RetryPrompt(kind string) string {
 	switch kind {
 	case "intake":
 		return "Reply with exactly this schema and nothing else:\nverdict: ok | needs-work\nsummary: one short paragraph\nquestions:\n- …"
 	case "pr-review":
-		return "Reply with exactly this schema and nothing else:\nverdict: lgtm | changes-requested\nsummary: one short paragraph\ncomments:\n- path: relative/file.go\n  line: 12\n  body: what is wrong"
+		return "Reply with exactly this schema and nothing else:\nverdict: lgtm | changes-requested\neffort: 1-5\ntests: yes | no | n/a\nsecurity: one short line\nsummary: one short paragraph\nfocus:\n- area: …\n  why: …\ncomments:\n- path: relative/file.go\n  line: 12\n  body: what is wrong"
 	default:
 		return "Reply with exactly the required schema, nothing else."
 	}

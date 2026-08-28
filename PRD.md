@@ -524,7 +524,7 @@ Triggered by SHA, not by comments: each distinct PR HEAD is reviewed at most onc
 5. Second unparseable verdict → `review_status=error`, `needs-human`.
 6. Reviewer does not merge, dismiss human reviews, or rewrite the issue.
 
-**Phase 6.1 (planned) — Reviewer Guide shape:** reshape the posted review toward a compact human-facing guide (pattern seen from `github-actions[bot]` “PR Reviewer Guide” comments): estimated review effort / residual risk blurb, tests+security one-liners, then a small set of ranked focus areas with rationale. Keep COMMENT-only, SHA gate, max 2 rounds, and parseable `verdict`/`summary`/`comments` so the implementer still gets actionable threads. Explicitly not Cursor Bugbot (cost/product); stay on included-pool models.
+**Phase 6.1 — Reviewer Guide shape:** Phase 6 review bodies are formatted as a compact human-facing guide: estimated effort (1–5), tests yes/no/n/a, one-line security blurb, ranked focus areas with rationale, plus the usual summary. Inline `comments` remain the implementer action channel. Still COMMENT-only, SHA-gated, max 2 rounds. Inspired by `github-actions[bot]` PR Reviewer Guide comments — not Cursor Bugbot; stay on included-pool models. Optional guide fields parse soft (missing effort/focus still accepts verdict/summary/comments).
 
 ### Later (do not build now)
 
@@ -577,4 +577,4 @@ If PRs are rare, fix prompts and catalog — do not add more agents. Intake QC (
 - **2026-08-27:** GitHub App `adamfriedl-studio`; prefer All-repositories install so Phase 4 new repos inherit App access; catalog whitelist still required before dispatch.
 - **2026-08-27:** Proceed to Phase 5/6 before §16 two-week window. QC on by default; models via role env + per-issue `model:` / `model:` label (no router agent). **Allowlist = Cursor Models pool only:** `composer-2.5`, `grok-4.5`, `grok-4.6` (cost).
 - **2026-08-27:** Watch cron is backstop only; dispatch kicks `studio-watch` after `pr_url`; target-hook required for daily comment/sync/merge loops (pilot: pad-lab).
-- **2026-08-28:** Phase 6.1 planned — Reviewer Guide–shaped Phase 6 output (effort/risk header + ranked focus areas), inspired by work `github-actions[bot]` guides; not Bugbot.
+- **2026-08-28:** Phase 6.1 shipped — Reviewer Guide–shaped Phase 6 GitHub review body (`effort` / `tests` / `security` / `focus` + summary); soft-parse optional fields; not Bugbot.

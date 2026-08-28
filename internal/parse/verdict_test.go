@@ -1,6 +1,9 @@
 package parse
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseIntakeOK(t *testing.T) {
 	raw := `Here is my take.
@@ -60,6 +63,40 @@ comments:
 	}
 	if r.Comments[0].Path != "main.go" || r.Comments[0].Line != 12 {
 		t.Fatalf("comment0 %#v", r.Comments[0])
+	}
+}
+
+func TestParsePRReviewGuide(t *testing.T) {
+	raw := `verdict: changes-requested
+effort: 3
+tests: yes
+security: No credential leaks in the diff.
+summary: Flag the share intent and meta filtering.
+focus:
+- area: Activity launch flag
+  why: Non-activity context may crash without FLAG_ACTIVITY_NEW_TASK
+- area: Sensitive meta filtering
+  why: Regex may miss non-standard secret names
+comments:
+- path: app/Share.kt
+  line: 40
+  body: Add FLAG_ACTIVITY_NEW_TASK
+`
+	r, err := ParsePRReview(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Effort != "3" || r.Tests != "yes" || r.Security == "" || len(r.Focus) != 2 {
+		t.Fatalf("guide fields %#v", r)
+	}
+	if r.Focus[0].Area != "Activity launch flag" || r.Focus[0].Why == "" {
+		t.Fatalf("focus0 %#v", r.Focus[0])
+	}
+	body := FormatPRReviewGuide(r, "bc-test", "https://github.com/adamfriedl/studio/issues/9")
+	for _, want := range []string{"PR Reviewer Guide", "3/5", "Tests:", "Security:", "Recommended focus areas", "Activity launch flag", "Studio:"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("guide body missing %q:\n%s", want, body)
+		}
 	}
 }
 
