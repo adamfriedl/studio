@@ -1,0 +1,107 @@
+name: studio-hook
+
+# Event-driven kick into adamfriedl/studio watch (cron is backstop only).
+# Docs: https://github.com/adamfriedl/studio/blob/main/docs/target-hook.md
+#
+# Secrets (either App pair or PAT fallback):
+#   STUDIO_APP_ID + STUDIO_APP_PRIVATE_KEY  (preferred)
+#   STUDIO_HOOK_TOKEN                       (PAT that can repository_dispatch studio)
+
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: studio-hook-${{ github.event.pull_request.number || github.event.workflow_run.head_sha || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  notify-studio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint token for studio dispatch
+        id: app
+        continue-on-error: true
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.STUDIO_APP_ID }}
+          private-key: ${{ secrets.STUDIO_APP_PRIVATE_KEY }}
+          owner: adamfriedl
+          repositories: studio
+
+      - name: Resolve studio issue + dispatch
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || secrets.STUDIO_HOOK_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
+          WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "No STUDIO_APP_* token or STUDIO_HOOK_TOKEN — skip"
+            exit 0
+          fi
+
+          body="${PR_BODY:-}"
+          pr_url="${PR_URL:-}"
+          sha="${HEAD_SHA:-}"
+          reason="${EVENT_NAME}"
+
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            reason="checks-${WR_CONCLUSION:-done}"
+            pr_json=$(gh api "repos/${{ github.repository }}/commits/${sha}/pulls" \
+              -H "Accept: application/vnd.github.groot-preview+json" || true)
+            body=$(echo "$pr_json" | jq -r '.[0].body // empty')
+            pr_url=$(echo "$pr_json" | jq -r '.[0].html_url // empty')
+            if [ -z "$body" ]; then
+              echo "No PR for sha $sha — skip"
+              exit 0
+            fi
+          elif [ "$EVENT_NAME" = "pull_request_review" ] || [ "$EVENT_NAME" = "pull_request_review_comment" ]; then
+            reason="review-activity"
+            if [ -z "${body:-}" ] && [ -n "${PR_NUMBER:-}" ]; then
+              body=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}" --jq .body)
+              pr_url=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}" --jq .html_url)
+              sha=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}" --jq .head.sha)
+            fi
+          elif [ "$EVENT_NAME" = "pull_request" ] && [ "$ACTION" = "closed" ]; then
+            reason="pr-closed"
+          fi
+
+          issue=$(printf '%s\n' "$body" | sed -nE 's/.*Studio:[[:space:]]*(https:\/\/github.com\/)?adamfriedl\/studio(\/issues)?[#/]([0-9]+).*/\3/p' | head -1)
+          if [ -z "$issue" ]; then
+            echo "No Studio: footer — skip"
+            exit 0
+          fi
+
+          event_type=studio-watch
+          case "$reason" in
+            checks-failure|checks-timed_out|checks-cancelled) event_type=studio-ci-failed ;;
+            checks-*) event_type=studio-checks-done ;;
+            review-activity) event_type=studio-review-activity ;;
+            pr-closed)
+              merged=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}" --jq .merged)
+              if [ "$merged" = "true" ]; then event_type=studio-pr-merged; else event_type=studio-watch; fi
+              ;;
+          esac
+
+          echo "Dispatch $event_type issue=$issue reason=$reason"
+          gh api -X POST repos/adamfriedl/studio/dispatches \
+            -f event_type="$event_type" \
+            -f "client_payload[issue_number]=$issue" \
+            -f "client_payload[reason]=$reason" \
+            -f "client_payload[pr_url]=${pr_url:-}" \
+            -f "client_payload[sha]=${sha:-}"
