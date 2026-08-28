@@ -16,8 +16,8 @@ Short pickup note. Spec: [`PRD.md`](./PRD.md). App: [`docs/github-app.md`](./doc
 
 ## Pick up here
 
-1. Live smoke: one intake `needs-work` → edit → `spec-ok`; one reviewer `changes-requested` → implementer FollowUp (pad-lab#2 / studio#3 was happy-path LGTM).
-2. Confirm pad-lab hook: human/bot review comment → `studio-watch` without cron. Copy hook to other allowlisted targets as needed.
+1. Live smoke: one intake `needs-work` → edit → `spec-ok`; one reviewer `changes-requested` → implementer FollowUp (pad-lab#2 / studio#3 merged+closed — happy path + hook merge-close OK).
+2. Copy pad-lab `studio-hook` + App secrets to other allowlisted targets as needed.
 3. **Phase 6.1 — Reviewer Guide shape** (planned): reshape Phase 6 review body toward a compact “PR Reviewer Guide” (inspired by `github-actions[bot]` guides on work PRs): short effort/risk header (tests present? security blurb?), then a few ranked focus areas with *why* — still COMMENT-only, still structured `verdict`/`summary`/`comments` for the implementer. Not Bugbot; keep included-pool models.
 4. Optional: raise default models in workflows once a stronger cloud id is confirmed.
 

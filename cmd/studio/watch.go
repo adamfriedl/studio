@@ -246,16 +246,27 @@ func watchReviews(ctx context.Context, client *gh.Client, cat *catalog.Catalog, 
 	}
 	var fresh []gh.PullComment
 	maxID := cursorID
+	skipped := 0
 	for _, cmt := range comments {
 		if cmt.ID <= cursorID {
 			continue
 		}
-		fresh = append(fresh, cmt)
 		if cmt.ID > maxID {
 			maxID = cmt.ID
 		}
+		// Advance past implementer-bot replies without FollowUp — otherwise
+		// each cursor[bot] thread reply re-enters watch and echoes.
+		if gh.SkipReviewFollowUp(cmt.User.Login) {
+			skipped++
+			continue
+		}
+		fresh = append(fresh, cmt)
 	}
 	if len(fresh) == 0 {
+		if maxID > cursorID && !dryRun {
+			fmt.Printf("#%d: advanced review_cursor past %d bot-only comment(s)\n", issueN, skipped)
+			return advanceReviewCursor(ctx, client, studioOwner, studioRepo, issueN, issue, b, strconv.FormatInt(maxID, 10))
+		}
 		fmt.Printf("#%d: no new review comments\n", issueN)
 		return nil
 	}
@@ -267,12 +278,26 @@ func watchReviews(ctx context.Context, client *gh.Client, cat *catalog.Catalog, 
 		fmt.Fprintf(&body, "- @%s on %s:%d (%s):\n  %s\n", cmt.User.Login, cmt.Path, cmt.Line, cmt.HTMLURL, strings.TrimSpace(cmt.Body))
 	}
 	p := prompt.Review(prompt.ReviewInput{PRURL: pr.HTMLURL, Comments: body.String()})
-	fmt.Printf("#%d: review FollowUp (%d comments) → %s\n", issueN, len(fresh), firstNonEmpty(b.AgentID, "(replace)"))
+	fmt.Printf("#%d: review FollowUp (%d comments, skipped %d bot) → %s\n", issueN, len(fresh), skipped, firstNonEmpty(b.AgentID, "(replace)"))
 	if dryRun {
 		fmt.Println(p)
 		return nil
 	}
+	// Cursor includes skipped IDs so bot replies are not re-fed next tick.
 	return sendWatchPrompt(ctx, client, cat, studioOwner, studioRepo, issueN, issue, b, p, "review", strconv.FormatInt(maxID, 10))
+}
+
+func advanceReviewCursor(ctx context.Context, client *gh.Client, studioOwner, studioRepo string, issueN int, issue *gh.Issue, b *binding.Binding, cursor string) error {
+	b.ReviewCursor = cursor
+	fresh, err := client.GetIssue(ctx, studioOwner, studioRepo, issueN)
+	if err != nil {
+		return err
+	}
+	newBody, err := binding.Upsert(fresh.Body, b)
+	if err != nil {
+		return err
+	}
+	return client.UpdateIssue(ctx, studioOwner, studioRepo, issueN, newBody, nil)
 }
 
 // sendWatchPrompt FollowUps the implementer, or replaces the agent on the existing branch if resume fails.
