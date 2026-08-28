@@ -64,7 +64,9 @@ Other labels: `working`, `pr-open`, `needs-human`, `needs-spec`, `done`.
 GitHub schedule cron is **unreliable** on quiet repos. Daily use requires:
 
 - Studio `repository_dispatch` kick after Start returns `pr_url`
-- Target workflow from [`docs/target-hook.md`](./docs/target-hook.md) + App secrets on the target (manual for existing allowlisted repos; automatic on `new:`)
+- Target `studio-hook` + `STUDIO_HOOK_TOKEN` ([`docs/target-hook.md`](./docs/target-hook.md)) — already on allowlisted repos; Phase 4 provisions both on `new:`
+
+Phase 6 posts a COMMENT **PR Reviewer Guide** (effort / tests / security / focus) when CI is green, then FollowUp on threads. Label `skip-review` to bypass.
 
 ## Local CLI
 
