@@ -13,3 +13,4 @@ repos:
   - name: homelab
   - name: adamfriedl.github.io
   - name: intake-desk
+  - name: pad-go-smoke
