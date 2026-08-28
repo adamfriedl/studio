@@ -1,0 +1,39 @@
+---
+description: Forge-wide agent Definition of Done — verify before done, small diffs, review/loop defaults
+alwaysApply: true
+---
+
+# Forge agent Definition of Done
+
+Applies across personal forge work. Repo `AGENTS.md` adds stack-specific detail; it does not replace this.
+
+## Before claiming done
+
+- Run the repo’s verify path (tests, lint, typecheck, dry-run as listed in `AGENTS.md`). Prefer the `verify` skill.
+- If no checks exist, say so and do the lightest sanity check available (`py_compile`, build, dry-run). Do not claim “done” on vibes alone.
+- **Simplify before commit:** on code/config/infra changes, run `/simplify` (or follow `.cursor/commands/simplify.md`) before `git commit` / before claiming done on work you will commit. Skip only for pure docs/typo-only edits with nothing to tighten. Do not expand scope while simplifying.
+- **Always review the change for quality and security** before claiming done. Same bar for agent- and human-authored code.
+  - Substantive code/config/infra diffs → run `review-bugbot` and `review-security` (or `/review`) on the diff; fix valid findings or explain disagreements.
+  - Tiny doc/typo-only diffs → still do an explicit quality + security pass yourself (correctness, secrets, unsafe commands, broken assumptions); full subagents optional.
+- End every coding turn that changed files with this block (required — a stop hook will bounce you if verify is missing):
+
+```markdown
+## Status
+- Verify: <commands> → pass|fail|n/a (why)
+- Simplify: done | n/a (docs-only) | deferred (why)
+- Review: quality+security done | deferred (why)
+```
+
+## Diffs and secrets
+
+- Prefer small, reviewable diffs. No drive-by refactors.
+- Never commit secrets, `.env`, credentials, or Terraform state.
+
+## Review and maintenance
+
+- PR merge-readiness → `babysit` skill.
+- Concurrency / loop / worktrees / subagents → follow always-on rule `forge-orchestration` (and `forge-workflow` skill for how-to). Do not default to one long babysitting session when that rule says to escalate.
+
+## Ask first
+
+- Destructive git operations, force-push, or broad refactors across unrelated files.

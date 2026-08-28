@@ -24,6 +24,7 @@ func Implement(in ImplementInput) string {
 	fmt.Fprintf(&b, "Open a **draft** pull request when the change is testable. Do not merge.\n\n")
 	fmt.Fprintf(&b, "Constraints:\n")
 	fmt.Fprintf(&b, "- Keep the diff small. Do not drive-by refactor.\n")
+	fmt.Fprintf(&b, "- Before committing: simplify — remove dead code, unused imports, speculative abstractions, and redundant comments. Prefer the smallest clear diff that still meets the issue. Do not change behavior while simplifying.\n")
 	fmt.Fprintf(&b, "- Discover and run this repo's tests (README, Makefile, go test, package scripts).\n")
 	fmt.Fprintf(&b, "- Do not edit .github/workflows or CI unless the failure is install/setup caused by this change.\n")
 	fmt.Fprintf(&b, "- Do not add secrets or change auth unless the issue requires it.\n")
