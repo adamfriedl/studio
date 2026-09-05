@@ -45,6 +45,27 @@ func TestRoundTrip(t *testing.T) {
 	}
 }
 
+func TestReadyForWatch(t *testing.T) {
+	cases := []struct {
+		name string
+		b    *Binding
+		want bool
+	}{
+		{name: "nil", b: nil, want: false},
+		{name: "intake-only", b: &Binding{SpecStatus: "approved", SpecAgentID: "bc-1"}, want: false},
+		{name: "repo-only", b: &Binding{Repo: "adamfriedl/pad-lab"}, want: false},
+		{name: "pr-only", b: &Binding{PRURL: "https://github.com/adamfriedl/pad-lab/pull/1"}, want: false},
+		{name: "ready", b: &Binding{Repo: "adamfriedl/pad-lab", PRURL: "https://github.com/adamfriedl/pad-lab/pull/1"}, want: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.b.ReadyForWatch(); got != tc.want {
+				t.Fatalf("ReadyForWatch()=%v want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestCorruptMissing(t *testing.T) {
 	_, err := Parse("no binding here")
 	if !errors.Is(err, ErrCorrupt) {

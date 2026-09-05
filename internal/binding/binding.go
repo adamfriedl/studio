@@ -34,6 +34,12 @@ type Binding struct {
 	UpdatedAt     string
 }
 
+// ReadyForWatch is true when watch can act on a target PR (needs pr_url+repo).
+// Intake-only footers are not ready — e.g. target-hook kick before Start upserts.
+func (b *Binding) ReadyForWatch() bool {
+	return b != nil && b.PRURL != "" && b.Repo != ""
+}
+
 func Parse(issueBody string) (*Binding, error) {
 	matches := blockRE.FindAllStringSubmatch(issueBody, -1)
 	if len(matches) == 0 {

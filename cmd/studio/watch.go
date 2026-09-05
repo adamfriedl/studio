@@ -107,8 +107,10 @@ func watchOne(ctx context.Context, client *gh.Client, cat *catalog.Catalog, stud
 		}
 		return err
 	}
-	if b.PRURL == "" || b.Repo == "" {
-		return fmt.Errorf("binding missing pr_url/repo")
+	if !b.ReadyForWatch() {
+		// Soft-skip: hook can kick before Start writes pr_url (exit 0, retry later).
+		fmt.Printf("#%d: binding not ready (missing pr_url/repo) — skip\n", issueN)
+		return nil
 	}
 	if !cat.AllowsFullName(b.Repo) {
 		if !dryRun {
