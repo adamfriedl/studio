@@ -37,6 +37,13 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
+      # The action hides Claude's output; surface only the final error text (e.g. auth/usage failures).
+      - name: Show Claude error
+        if: failure() && steps.claude.outputs.execution_file != ''
+        env:
+          F: ${{ steps.claude.outputs.execution_file }}
+        run: jq -r '[.[] | select(.type == "result")][-1] | select(.is_error) | .result // "no error text"' "$F" || true
+
       # The action leaves PR creation to a human. github.token-created PRs don't trigger
       # other workflows, which is why review runs as a job here instead of on pull_request.
       - name: Open PR for issue branch
