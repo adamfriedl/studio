@@ -1,0 +1,93 @@
+name: claude-agent
+
+# Reusable: each repo calls this from a small claude.yml (pad-lab's is the reference).
+# Caller job must grant contents/pull-requests/issues: write, id-token: write, actions: read.
+# Implements @claude requests; when that opens a new PR, runs one review pass on it.
+
+on:
+  workflow_call:
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: true
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    outputs:
+      pr_number: ${{ steps.pr.outputs.number }}
+      branch: ${{ steps.claude.outputs.branch_name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        id: claude
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      # The action leaves PR creation to a human. github.token-created PRs don't trigger
+      # other workflows, which is why review runs as a job here instead of on pull_request.
+      - name: Open PR for issue branch
+        id: pr
+        if: steps.claude.outputs.branch_name != '' && github.event.issue && !github.event.issue.pull_request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.claude.outputs.branch_name }}
+          ISSUE: ${{ github.event.issue.number }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          ahead=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$BRANCH" --jq .ahead_by 2>/dev/null || echo 0)
+          if [ "$ahead" = "0" ]; then echo "No commits on $BRANCH; skipping"; exit 0; fi
+          if [ -n "$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            echo "PR already open for $BRANCH"; exit 0
+          fi
+          title=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$BRANCH" --jq '.commits[0].commit.message | split("\n")[0]')
+          url=$(gh pr create --repo "$GITHUB_REPOSITORY" --base "$BASE" --head "$BRANCH" \
+            --title "$title" \
+            --body "Closes #$ISSUE. Opened automatically from Claude's branch — see the issue thread for Claude's summary.")
+          echo "number=${url##*/}" >> "$GITHUB_OUTPUT"
+
+  review:
+    needs: claude
+    if: needs.claude.outputs.pr_number != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.claude.outputs.branch }}
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ needs.claude.outputs.pr_number }}
+
+            Review this PR once. It was written by another Claude run from an issue; a human decides what to act on.
+
+            Report only things worth fixing: correctness bugs, unhandled edge cases, security problems,
+            and gaps against the linked issue or the repo's CLAUDE.md/AGENTS.md. Skip style nits and praise.
+            For each finding give a number, the file:line, what breaks, and a concrete scenario.
+            If nothing survives that bar, say so in one line.
+
+            Post everything as a single PR comment with `gh pr comment`. Never write the literal
+            mention trigger (the @ sign followed by "claude") anywhere in your comment.
+          claude_args: |
+            --allowedTools "Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
