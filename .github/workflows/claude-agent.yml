@@ -59,7 +59,11 @@ jobs:
           ISSUE: ${{ github.event.issue.number }}
           BASE: ${{ github.event.repository.default_branch }}
         run: |
-          ahead=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$BRANCH" --jq .ahead_by 2>/dev/null || echo 0)
+          # Claude reports a branch even when it only replied and never pushed.
+          if ! gh api "repos/$GITHUB_REPOSITORY/branches/$BRANCH" --silent 2>/dev/null; then
+            echo "$BRANCH was not pushed; nothing to open"; exit 0
+          fi
+          ahead=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$BRANCH" --jq .ahead_by)
           if [ "$ahead" = "0" ]; then echo "No commits on $BRANCH; skipping"; exit 0; fi
           if [ -n "$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
             echo "PR already open for $BRANCH"; exit 0
