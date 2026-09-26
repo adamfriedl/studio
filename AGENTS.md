@@ -1,13 +1,15 @@
-## Verify
+# AGENTS.md
 
-```bash
-go test ./...
-go run ./cmd/studio doctor --dry-run
-STUDIO_DRY_LABELS=repo:pad-lab go run ./cmd/studio dispatch --issue 1 --dry-run
-```
+This repo holds shared GitHub Actions automation for my personal repos — see `README.md` for how it works. There is no application code.
 
-No live network in default tests. Do not commit secrets or `.env`.
+## Changing `claude-agent.yml`
 
-## Go style
+- Every enabled repo calls it at `@main`, so a push here is a deploy. Keep diffs small.
+- Verify: `actionlint .github/workflows/claude-agent.yml`, then trigger it on `pad-lab` with a small `@claude` issue and check both jobs.
+- Callers grant permissions; the reusable workflow can't exceed them. If you add a permission here, update the caller snippet in `README.md` and every enabled repo's `claude.yml`.
+- The review prompt must never contain the literal `@claude` mention, or a review comment could trigger another run.
+- Pass event data to `run:` steps through `env:`, never by interpolating `${{ }}` into shell.
 
-Follow the personal `go` skill (`~/.cursor/skills/go`, from [spf13/go-skills](https://github.com/spf13/go-skills/blob/main/go/SKILL.md)) and the `go-standards` Cursor rule. Keep Studio’s `internal/` layout from the PRD for now; write idiomatic Go inside it.
+## Secrets
+
+Never commit tokens. `scripts/claude-rollout.sh` reads the Claude token from a hidden prompt; run it in a normal terminal, not through an agent session that would log its output.
